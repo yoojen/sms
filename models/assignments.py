@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from models.base_model import Base, BaseModel
-from datetime import date
 
 
 class Assignment(Base, BaseModel):
@@ -15,3 +14,8 @@ class Assignment(Base, BaseModel):
     year_of_study = Column(Integer, nullable=False)
     due_date = Column(DateTime)
     description = Column(String(256))
+    file_path = Column(String(128), nullable=False)
+
+    # One-To-Many relationship
+    teachers = relationship("Teacher", back_populates="assignments")
+    submissions = relationship("Submission", back_populates="assignment")

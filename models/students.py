@@ -18,3 +18,6 @@ class Student(Base, BaseModel):
     sponsorship = Column(String(50))
     citizenship = Column(String(50), nullable=False)
     last_login = Column(datetime)
+
+    scores = relationship("Score", back_populates="student")
+    submissions = relationship("Submission", back_populates="student")

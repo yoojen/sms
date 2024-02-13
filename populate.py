@@ -5,6 +5,7 @@ from models.roles_and_admins import *
 from models.teacher_course import *
 from models.assignments import *
 from models.materials_and_matdept import *
+from models.communications import *
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from datetime import datetime, date

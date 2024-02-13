@@ -19,6 +19,7 @@ class Teacher(BaseModel, Base):
     staff_member = Column(Boolean, default=False)
     last_login = Column(DateTime)
 
+    #  Many-To-Many relationship
     degree_association = relationship(
         "TeacherDegree", back_populates="teacher")
     degrees = association_proxy("degree_association", "degree")
@@ -30,6 +31,11 @@ class Teacher(BaseModel, Base):
     course_association = relationship(
         "TeacherCourse", back_populates="teacher")
     courses = association_proxy("course_association", "course")
+
+    #  One-To-Many relationship
+    assignments = relationship("Assignment", back_populates="teachers")
+    communications = relationship("Communication", back_populates="teachers")
+    scored = relationship("Score", back_populates="teacher")
 
 
 class TeacherDegree(BaseModel, Base):

@@ -13,3 +13,8 @@ class Submission(Base, BaseModel):
     assign_id = Column(String(50), ForeignKey(
         "assignments.id"), nullable=False)
     year_of_study = Column(Integer, nullable=False)
+    file_path = Column(String(128), nullable=False)
+
+    student = relationship("Student", back_populates="submissions")
+    department = relationship("Department", back_populates="submissions")
+    assignment = relationship("Assignment", back_populates="submissions")

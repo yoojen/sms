@@ -15,6 +15,7 @@ class Department(Base, BaseModel):
     n_teachers = Column(Integer)
     hod = Column(String(50), ForeignKey("teachers.id"), nullable=False)
 
+    # Many-To-Many relationship
     course_association = relationship(
         "DepartmentCourse", back_populates="department")
     courses = association_proxy("course_association", "course")
@@ -26,6 +27,11 @@ class Department(Base, BaseModel):
     material_association = relationship(
         "MaterialDepartments", back_populates="department")
     materials = association_proxy("material_association", "material")
+
+    # One-To-Many relationship
+    communications = relationship(
+        "Communication", back_populates="departments")
+    submissions = relationship("Submission", back_populates="department")
 
 
 class DepartmentCourse(Base, BaseModel):
@@ -53,6 +59,7 @@ class Course(Base, BaseModel):
     end_date = Column(DateTime, nullable=False)
     created_by = Column(String(50), ForeignKey("admins.id"), nullable=False)
 
+    #  Many-To-Many relationship
     department_association = relationship(
         "DepartmentCourse", back_populates="course")
     departments = association_proxy("department_association", "department")
@@ -60,3 +67,7 @@ class Course(Base, BaseModel):
     teacher_association = relationship(
         "TeacherCourse", back_populates="course")
     teachers = association_proxy("teacher_association", "teacher")
+
+    #  One-To-Many relationship
+    schedules = relationship("Course", back_populates="course")
+    scores = relationship("Score", back_populates="course")
