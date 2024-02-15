@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from base_model import Base, BaseModel
+from models.base_model import Base, BaseModel
 
 
 class Score(Base, BaseModel):
