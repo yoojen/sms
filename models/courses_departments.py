@@ -69,5 +69,4 @@ class Course(Base, BaseModel):
     teachers = association_proxy("teacher_association", "teacher")
 
     #  One-To-Many relationship
-    schedules = relationship("Course", back_populates="course")
     scores = relationship("Score", back_populates="course")
