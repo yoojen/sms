@@ -31,11 +31,13 @@ class Department(BaseModel, Base):
 
     # One-To-Many relationship
     communications = relationship(
-        "Communication", back_populates="departments", cascade='all, delete-orphan')
+        "Communication", back_populates="departments", cascade='delete, delete-orphan')
     submissions = relationship(
-        "Submission", back_populates="department", cascade='all, delete-orphan')
+        "Submission", back_populates="department", cascade='delete, delete-orphan')
     scores = relationship(
-        "Score", back_populates='department', cascade='all, delete-orphan')
+        "Score", back_populates='department', cascade='delete, delete-orphan')
+    students = relationship("Student", back_populates="department",
+                            cascade="delete, passive_deletes=all")
 
 
 class DepartmentCourse(BaseModel, Base):

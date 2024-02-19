@@ -22,3 +22,4 @@ class Student(BaseModel, Base):
     scores = relationship("Score", back_populates="student")
     submissions = relationship(
         "Submission", back_populates="student")
+    department = relationship("Department", back_populates="students")
