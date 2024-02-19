@@ -94,19 +94,19 @@ db = storage.DB()
 
 db.reload()
 
-# eugene = Student(regno=221006037, first_name="MUKAHIRWA", last_name="Honorine",
-#                  email="pamella@gmai.com", password="pamella123", dob=datetime.utcnow(), dept_id=4, year_of_study=3, citizenship="Rwanda")
-# db.create_object(eugene)
+eugene = Student(regno=221003870, first_name="MUTUYIMANA", last_name="Eugene",
+                 email="eugene@gmai.com", password="Eugene123", dob=datetime.utcnow(), dept_id=4, year_of_study=3, citizenship="Rwanda")
+db.create_object(eugene)
 
 # rmt = Submission(course_code=3, dept_id=4, student_id=221003870,
 #                  assign_id='43', year_of_study=3, file_path='/temp')
 # db.create_object(rmt)
 
 # eugene_rmt =
-# dept = Department(dept_code=4, dept_name='BUSINESS INFORMATION TECHNOLOGY',
-#                   duration=3, trimester_or_semester='Trimester', credits=480, n_teachers=12, hod=1)
+dept = Department(dept_code=4, dept_name='BUSINESS INFORMATION TECHNOLOGY',
+                  duration=3, trimester_or_semester='Trimester', credits=480, n_teachers=12, hod=1)
 
-# db.create_object(dept)
+db.create_object(dept)
 
 # tchr = Teacher(
 #     first_name='Mushimwe',

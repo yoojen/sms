@@ -13,7 +13,7 @@ class Student(BaseModel, Base):
     password = Column(String(18), nullable=False)
     dob = Column(DateTime, nullable=False)
     dept_id = Column(String(50), ForeignKey(
-        "departments.dept_code"), nullable=False)
+        "departments.dept_code", ondelete='SET NULL'))
     year_of_study = Column(Integer, nullable=False)
     sponsorship = Column(String(50))
     citizenship = Column(String(50), nullable=False)

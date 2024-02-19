@@ -36,8 +36,8 @@ class Department(BaseModel, Base):
         "Submission", back_populates="department", cascade='delete, delete-orphan')
     scores = relationship(
         "Score", back_populates='department', cascade='delete, delete-orphan')
-    students = relationship("Student", back_populates="department",
-                            cascade="delete, passive_deletes=all")
+    students = relationship(
+        "Student", back_populates="department", cascade='delete, delete-orphan')
 
 
 class DepartmentCourse(BaseModel, Base):
