@@ -34,6 +34,8 @@ class Department(BaseModel, Base):
         "Communication", back_populates="departments", cascade='all, delete-orphan')
     submissions = relationship(
         "Submission", back_populates="department", cascade='all, delete-orphan')
+    scores = relationship(
+        "Score", back_populates='department', cascade='all, delete-orphan')
 
 
 class DepartmentCourse(BaseModel, Base):

@@ -11,6 +11,8 @@ class Score(BaseModel, Base):
         "teachers.id"), nullable=False)
     student_id = Column(Integer, ForeignKey(
         "students.regno", ondelete='CASCADE'), nullable=False)
+    dept_id = Column(String(10), ForeignKey(
+        'departments.dept_code', ondelete='CASCADE'), nullable=False)
     course_code = Column(String(10), ForeignKey(
         "courses.course_code", ondelete='CASCADE'), nullable=False)
     assign_score = Column(Integer)
@@ -19,5 +21,6 @@ class Score(BaseModel, Base):
 
     #  One-To-Many relationship
     student = relationship("Student", back_populates="scores")
+    department = relationship("Department", back_populates='scores')
     teacher = relationship("Teacher", back_populates="scored")
     course = relationship("Course", back_populates="scores")
