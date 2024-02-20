@@ -9,7 +9,7 @@ class Department(BaseModel, Base):
     """Model for departments table in db storage"""
     __tablename__ = "departments"
     dept_code = Column(String(10), primary_key=True, nullable=False)
-    dept_name = Column(String(50), nullable=False)
+    dept_name = Column(String(50), nullable=False, unique=True)
     duration = Column(Integer, nullable=False)
     trimester_or_semester = Column(String(10), nullable=False)
     credits = Column(Integer, nullable=False)
