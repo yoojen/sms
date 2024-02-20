@@ -20,10 +20,10 @@ class RoleAdmin(BaseModel, Base):
     """Model for user_roles table in db storage"""
     __tablename__ = "roles_admin"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    role_id = Column(Integer, ForeignKey(
-        "roles.id", ondelete='CASCADE'), nullable=False)
     admin_id = Column(String(10), ForeignKey(
         "admins.id", ondelete='CASCADE'), nullable=False)
+    role_id = Column(Integer, ForeignKey(
+        "roles.id", ondelete='CASCADE'), nullable=False)
     date_granted = Column(String(50), nullable=False)
 
     admin = relationship("Admin", back_populates="roles_association")
@@ -44,3 +44,5 @@ class Admin(BaseModel, Base):
     roles_association = relationship(
         "RoleAdmin", back_populates="admin", cascade='all, delete-orphan')
     roles = association_proxy("roles_association", "role")
+
+    courses = relationship('Course', back_populates='creator')

@@ -55,7 +55,7 @@ class DB:
 
     def reload(self) -> None:
         """connect python client to sqlite3 data storage"""
-        # Base.metadata.drop_all(bind=self._engine)
+        Base.metadata.drop_all(bind=self._engine)
         Base.metadata.create_all(bind=self._engine)
         session_factory = sessionmaker(
             bind=self._engine, expire_on_commit=True)
