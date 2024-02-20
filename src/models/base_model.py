@@ -13,5 +13,11 @@ class BaseModel:
     updated_at = Column(
         DateTime, default=datetime.utcnow(), nullable=False)
 
+    def to_json(self) -> dict:
+        new_dict = {}
+        new_dict = self.__dict__
+        del new_dict['_sa_instance_state']
+        return new_dict
+
     def __str__(self) -> str:
         return f"object: {self.__class__}"
