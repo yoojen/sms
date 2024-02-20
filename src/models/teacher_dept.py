@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from uuid import uuid4
 from sqlalchemy.orm import relationship
 from models.base_model import BaseModel, Base
@@ -7,10 +7,11 @@ from models.base_model import BaseModel, Base
 class TeacherDepartments(BaseModel, Base):
     """Model for teacher_departments table in db storage"""
     __tablename__ = "teacher_departments"
-    id = Column(String(30), default=uuid4(), primary_key=True)
-    teaceher_id = Column(String(50), ForeignKey("teachers.id"), nullable=False)
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    teaceher_id = Column(String(50), ForeignKey(
+        "teachers.id", ondelete='CASCADE'), nullable=False)
     dept_id = Column(String(10), ForeignKey(
-        "departments.dept_code"), nullable=False)
+        "departments.dept_code", ondelete='CASCADE'), nullable=False)
     date_assigned = Column(DateTime, nullable=False)
 
     department = relationship(

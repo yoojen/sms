@@ -29,11 +29,11 @@ class Teacher(BaseModel, Base):
     degrees = association_proxy("degree_association", "degree")
 
     department_association = relationship(
-        "TeacherDepartments", back_populates="teacher")
+        "TeacherDepartments", back_populates="teacher", cascade='all, delete-orphan')
     departments = association_proxy("department_association", "department")
 
     course_association = relationship(
-        "TeacherCourse", back_populates="teacher")
+        "TeacherCourse", back_populates="teacher", cascade='all, delete-orphan')
     courses = association_proxy("course_association", "course")
 
     #  One-To-Many relationship
@@ -43,6 +43,8 @@ class Teacher(BaseModel, Base):
         "Communication", back_populates="teachers", cascade='all, delete-orphan')
     scored = relationship("Score", back_populates="teacher",
                           cascade='all, delete-orphan')
+    materials = relationship(
+        'Material', back_populates='teacher', cascade='all, delete-orphan')
 
 
 class TeacherDegree(BaseModel, Base):

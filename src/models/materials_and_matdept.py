@@ -10,25 +10,28 @@ class Material(BaseModel, Base):
     __tablename__ = "materials"
     id = Column(Integer, autoincrement=True, primary_key=True)
     course_code = Column(String(10), ForeignKey(
-        "courses.course_code"), nullable=False)
-    teacher_id = Column(String(50), ForeignKey("teachers.id"), nullable=False)
+        "courses.course_code", ondelete='CASCADE'), nullable=False)
+    teacher_id = Column(String(50), ForeignKey(
+        "teachers.id", ondelete='SET NULL'), nullable=False)
     year_of_study = Column(Integer, nullable=False)
     description = Column(String(256))
     file_path = Column(String(128), nullable=False)
 
     department_association = relationship(
-        "MaterialDepartments", back_populates="material")
+        "MaterialDepartments", back_populates="material", cascade='all, delete-orphan')
     departments = association_proxy("department_association", "department")
+
+    teacher = relationship('Teacher', back_populates='materials')
 
 
 class MaterialDepartments(BaseModel, Base):
     """Model for materials_departments table in db storage"""
     __tablename__ = "materials_departments"
-    id = Column(String(30), default=uuid4(), primary_key=True)
+    id = Column(Integer, autoincrement=True, primary_key=True)
     material_id = Column(String(50), ForeignKey(
-        "materials.id"), nullable=False)
+        "materials.id", ondelete='CASCADE'), nullable=False)
     department_id = Column(String(10), ForeignKey(
-        "departments.dept_code"), nullable=False)
+        "departments.dept_code", ondelete='CASCADE'), nullable=False)
     date_uploaded = Column(DateTime, nullable=False)
 
     department = relationship(

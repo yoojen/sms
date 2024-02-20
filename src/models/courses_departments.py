@@ -23,11 +23,11 @@ class Department(BaseModel, Base):
     courses = association_proxy("course_association", "course")
 
     teacher_association = relationship(
-        "TeacherDepartments", back_populates="department")
+        "TeacherDepartments", back_populates="department", cascade='all, delete-orphan')
     teachers = association_proxy("teacher_association", "teacher")
 
     material_association = relationship(
-        "MaterialDepartments", back_populates="department")
+        "MaterialDepartments", back_populates="department", cascade='all, delete-orphan')
     materials = association_proxy("material_association", "material")
 
     # One-To-Many relationship
@@ -74,7 +74,7 @@ class Course(BaseModel, Base):
     departments = association_proxy("department_association", "department")
 
     teacher_association = relationship(
-        "TeacherCourse", back_populates="course")
+        "TeacherCourse", back_populates="course", cascade='all, delete-orphan')
     teachers = association_proxy("teacher_association", "teacher")
 
     #  One-To-Many relationship
