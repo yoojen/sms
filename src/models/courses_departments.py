@@ -14,11 +14,12 @@ class Department(BaseModel, Base):
     trimester_or_semester = Column(String(10), nullable=False)
     credits = Column(Integer, nullable=False)
     n_teachers = Column(Integer)
-    hod = Column(String(50), ForeignKey("teachers.id"), nullable=False)
+    hod = Column(String(50), ForeignKey(
+        "teachers.id", ondelete='SET NULL'), nullable=False)
 
     # Many-To-Many relationship
     course_association = relationship(
-        "DepartmentCourse", back_populates="department")
+        "DepartmentCourse", back_populates="department", cascade='all, delete-orphan')
     courses = association_proxy("course_association", "course")
 
     teacher_association = relationship(
@@ -42,12 +43,12 @@ class Department(BaseModel, Base):
 
 class DepartmentCourse(BaseModel, Base):
     """Model for departments_courses table in db storage"""
-    id = Column(String(30), default=uuid4(), primary_key=True)
+    id = Column(Integer, autoincrement=True, primary_key=True)
     __tablename__ = "departments_courses"
     dept_id = Column(String(10), ForeignKey(
-        "departments.dept_code"), nullable=False)
+        "departments.dept_code", ondelete='CASCADE'), nullable=False)
     course_id = Column(String(10), ForeignKey(
-        "courses.course_code"), nullable=False)
+        "courses.course_code", ondelete='CASCADE'), nullable=False)
     date_assigned = Column(DateTime, nullable=False)
 
     course = relationship("Course", back_populates="department_association")
@@ -64,11 +65,12 @@ class Course(BaseModel, Base):
     year_of_study = Column(Integer, nullable=False)
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
-    created_by = Column(String(50), ForeignKey("admins.id"), nullable=False)
+    created_by = Column(String(50), ForeignKey(
+        "admins.id", ondelete="SET NULL"), nullable=False)
 
     #  Many-To-Many relationship
     department_association = relationship(
-        "DepartmentCourse", back_populates="course")
+        "DepartmentCourse", back_populates="course", cascade='all, delete-orphan')
     departments = association_proxy("department_association", "department")
 
     teacher_association = relationship(

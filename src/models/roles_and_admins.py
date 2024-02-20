@@ -11,16 +11,19 @@ class Role(BaseModel, Base):
     id = Column(Integer, autoincrement=True, primary_key=True)
     role_name = Column(String(50), nullable=False)
 
-    admins_association = relationship("RoleAdmin", back_populates="role")
+    admins_association = relationship(
+        "RoleAdmin", back_populates="role", cascade='all, delete-orphan')
     admins = association_proxy("admins_association", "admin")
 
 
 class RoleAdmin(BaseModel, Base):
     """Model for user_roles table in db storage"""
     __tablename__ = "roles_admin"
-    id = Column(String(30), default=uuid4(), primary_key=True)
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
-    admin_id = Column(String(10), ForeignKey("admins.id"), nullable=False)
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    role_id = Column(Integer, ForeignKey(
+        "roles.id", ondelete='CASCADE'), nullable=False)
+    admin_id = Column(String(10), ForeignKey(
+        "admins.id", ondelete='CASCADE'), nullable=False)
     date_granted = Column(String(50), nullable=False)
 
     admin = relationship("Admin", back_populates="roles_association")
@@ -38,5 +41,6 @@ class Admin(BaseModel, Base):
     dob = Column(DateTime, nullable=False)
     last_login = Column(DateTime)
 
-    roles_association = relationship("RoleAdmin", back_populates="admin")
+    roles_association = relationship(
+        "RoleAdmin", back_populates="admin", cascade='all, delete-orphan')
     roles = association_proxy("roles_association", "role")
