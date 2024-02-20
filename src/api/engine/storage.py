@@ -78,7 +78,14 @@ class DB:
 
     def get_by_id(self, cls,  id: str) -> Dict:
         """Query object from the database based on id provided as param"""
-        obj = self._session.query(cls).filter(cls.id == id).first()
+        if (cls == self.classes['Course']):
+            obj = self._session.query(cls).filter(
+                cls.course_code == id).first()
+        if (cls == self.classes['Department']):
+            obj = self._session.query(cls).filter(
+                cls.dept_code == id).first()
+        else:
+            obj = self._session.query(cls).filter(cls.id == id).first()
         return obj
 
     def update(self, id: str, data: Dict) -> Dict:

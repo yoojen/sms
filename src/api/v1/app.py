@@ -1,9 +1,11 @@
 from flask import Flask, jsonify
 from api.v1.views import course_blueprint
+from api.v1.views import dept_blueprint
 HOST = '127.0.0.1'
 PORT = 5000
 app = Flask(__name__)
 app.register_blueprint(course_blueprint)
+app.register_blueprint(dept_blueprint)
 
 
 @app.route('/')
