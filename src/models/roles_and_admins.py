@@ -33,7 +33,7 @@ class Admin(BaseModel, Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50))
-    email = Column(String(50), nullable=False)
+    email = Column(String(50), nullable=False, unique=True)
     password = Column(String(18), nullable=False)
     dob = Column(DateTime, nullable=False)
     last_login = Column(DateTime)

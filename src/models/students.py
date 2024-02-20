@@ -9,7 +9,7 @@ class Student(BaseModel, Base):
     regno = Column(Integer, primary_key=True, nullable=False)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50))
-    email = Column(String(50), nullable=False)
+    email = Column(String(50), nullable=False, unique=True)
     password = Column(String(18), nullable=False)
     dob = Column(DateTime, nullable=False)
     dept_id = Column(String(50), ForeignKey(
