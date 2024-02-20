@@ -59,7 +59,7 @@ class Course(BaseModel, Base):
     """Model for courses table in db storage"""
     __tablename__ = "courses"
     course_code = Column(String(10), primary_key=True, nullable=False)
-    course_name = Column(String(50), nullable=False)
+    course_name = Column(String(50), nullable=False, unique=True)
     credits = Column(Integer, nullable=False)
     year_of_study = Column(Integer, nullable=False)
     start_date = Column(DateTime, nullable=False)
