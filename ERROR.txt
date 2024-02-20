@@ -10,3 +10,16 @@ HANDLE ONDELETE EVENT ON SCORE TABLE FOR TEACHER, SET NULL THE TEACHER CO	LUMN
 INSERT INTO "main"."courses"
 ("course_code", "course_name", "credits", "year_of_study", "start_date", "end_date", "created_by", "created_at", "updated_at")
 VALUES ('BIT4233', 'BIG DATA AND SOCIAL MEDIA', 20, 3, '2024-02-19 16:58:44.177709', '2024-02-28 16:58:44.177709', '1', '2024-02-19 16:58:44.177709', '2024-02-19 16:58:44.177709');
+
+WHAT WILL HAPPEN WHEN WE DELETE DEPARTMENT FROM OUR SCHOOL?
+ARE WE GONNA DELETE ALL MATERIALS RELATED TO THAT DEPARTMENT
+OR WE CAN LET MATERIALS REMAIN THERE?
+
+
+""
+from sqlalchemy import delete
+
+parent = session.query(Parent).get(1)
+session.delete(parent.children)  # Delete all child objects associated with the parent
+session.commit()
+""

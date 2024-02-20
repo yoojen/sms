@@ -85,12 +85,15 @@ session.commit()
 
 
 from datetime import datetime
+from models.materials_and_matdept import Material, MaterialDepartments
 from models.students import Student
+from models.teacher_course import TeacherCourse
+from models.teacher_dept import TeacherDepartments
 from models.teachers_and_degree import *
-from models.roles_and_admins import Admin
+from models.roles_and_admins import Admin, Role, RoleAdmin
 from api.engine import storage
 from models.submissions import Submission
-from models.courses_departments import Department
+from models.courses_departments import Course, Department, DepartmentCourse
 db = storage.DB()
 
 db.reload()
@@ -112,11 +115,20 @@ db.reload()
 # db.create_object(rmt)
 
 # eugene_rmt =
-# dept = Department(dept_code=4, dept_name='BUSINESS INFORMATION TECHNOLOGY',
-#                   duration=3, trimester_or_semester='Trimester', credits=480, n_teachers=12, hod=1)
+yoojen = Admin(first_name="Eugene",
+               last_name="Mutuyimana",
+               email="yoojen@google.com",
+               password="test", dob=datetime.utcnow(),
+               last_login=datetime.utcnow())
 
-# db.create_object(dept)
 
+super_admin = Role(role_name="super admin")
+
+role_admin = RoleAdmin(admin=yoojen, role=super_admin,
+                       date_granted=str(datetime.utcnow()))
+db.create_object(yoojen)
+db.create_object(super_admin)
+db.create_object(role_admin)
 tchr = Teacher(
     first_name='Mushimwe',
     last_name='Jean',
@@ -125,7 +137,43 @@ tchr = Teacher(
     dob=datetime.utcnow(),
     staff_member=False)
 
+course = Course(course_code="BIT4233", course_name="BIG DATA AND SOCIAL MEDIA", credits=20, year_of_study=3,
+                start_date=datetime.utcnow(), end_date=datetime.utcnow(), created_by=yoojen.id)
+
+created = db.create_object(tchr)
+db.create_object(course)
+tch_course = TeacherCourse(teacher=tchr, course=course,
+                           date_assigned=datetime.utcnow())
+db.create_object(tch_course)
+dept = Department(dept_code='BIT', dept_name='BUSINESS INFORMATION TECHNOLOGY',
+                  duration=3, trimester_or_semester='Trimester', credits=480, n_teachers=12, hod=tchr.id)
+db.create_object(dept)
+tchr_dept = TeacherDepartments(
+    teacher=tchr, department=dept, date_assigned=datetime.utcnow())
+db.create_object(tchr_dept)
+mat = Material(course_code="BIT1234", teacher_id=tchr.id,
+               year_of_study=3, description="Big data book", file_path='/bit/big_data')
+mat_dept = MaterialDepartments(
+    material=mat, department=dept, date_uploaded=datetime.utcnow())
+
+db.create_object(mat)
+db.create_object(mat_dept)
+
+course = db.get_by_id(Course, 'BIT4233')
+print(course.creator)
+# dept = db.get_by_id(Department, 'BIT')
+# yoojen = db.get_by_id(Admin, 1)
+
+# tchr = Teacher(
+#     first_name='Mushimwe',
+#     last_name='Jean',
+#     email='jean@google.com',
+#     password="google.123",
+#     dob=datetime.utcnow(),
+#     staff_member=False)
+
 # created = db.create_object(tchr)
+
 # # print(created)
 # # # subs = db.get_all_object(Student)
 
