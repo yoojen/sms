@@ -30,7 +30,7 @@ class RoleAdmin(BaseModel, Base):
 class Admin(BaseModel, Base):
     """Model for admins table in db storage"""
     __tablename__ = "admins"
-    id = Column(String(10), primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50))
     email = Column(String(50), nullable=False)

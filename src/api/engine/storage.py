@@ -2,6 +2,7 @@ from typing import Dict
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from models.base_model import Base
+from sqlalchemy.exc import NoResultFound
 
 from models.courses_departments import (Department,
                                         Course,
@@ -52,7 +53,7 @@ class DB:
         """create engine when it is called"""
         self._engine = create_engine('sqlite:///sims.db', echo=False)
 
-    def reload(self):
+    def reload(self) -> None:
         """connect python client to sqlite3 data storage"""
         # Base.metadata.drop_all(bind=self._engine)
         Base.metadata.create_all(bind=self._engine)
@@ -63,39 +64,67 @@ class DB:
 
     def create_object(self, obj) -> Dict:
         """create new object in the database"""
-        print(type(obj) in self.classes.values())
         if type(obj) in self.classes.values():
             self._session.add(obj)
             self._session.commit()
-            return self
+            return obj
         else:
             return f'{obj.__repr__} not in known classes'
 
     def get_all_object(self, cls) -> Dict:
         """Query object from the database based on cls"""
-        objs = self._session.query(cls).all()
+        objs = {}
+        if cls in self.classes.keys():
+            objs = self._session.query(cls).all()
         return objs
 
     def get_by_id(self, cls,  id: str) -> Dict:
         """Query object from the database based on id provided as param"""
-        if (cls == self.classes['Course']):
-            obj = self._session.query(cls).filter(
-                cls.course_code == id).first()
-        if (cls == self.classes['Department']):
-            obj = self._session.query(cls).filter(
-                cls.dept_code == id).first()
-        else:
-            obj = self._session.query(cls).filter(cls.id == id).first()
+        obj = {}
+
+        if cls in self.classes.values():
+            if (cls == self.classes['Course']):
+                obj = self._session.query(cls).filter(
+                    cls.course_code == id).first()
+            elif (cls == self.classes['Department']):
+                obj = self._session.query(cls).filter(
+                    cls.dept_code == id).first()
+            elif (cls == self.classes['Student']):
+                obj = self._session.query(cls).filter(
+                    cls.regno == id).first()
+            else:
+                obj = self._session.query(cls).filter(cls.id == id).first()
         return obj
 
-    def update(self, id: str, data: Dict) -> Dict:
+    def update(self, cls, id: str, **kwargs) -> Dict:
         """update the object in the databse using provided
         id and data as params
         """
-        pass
+        if cls in self.classes.values():
+            obj = self.get_by_id(cls, id)
+            if obj:
+                for k, v in kwargs.items():
+                    if obj.__dict__.get(k) == v:
+                        raise ValueError("can not be the same")
+                    setattr(obj, k, v)
+                    self._session.commit()
+            else:
+                raise NoResultFound('Object with that id not found')
+            return obj
+        else:
+            raise NoResultFound('Model not found')
 
-    def delete(self, id: str) -> bool:
+    def delete(self, cls, id: str) -> bool:
         """delete item in the database which matches id 
         prvovided in function params
         """
-        pass
+        if cls in self.classes.values():
+            obj = self.get_by_id(cls, id)
+            if obj:
+                self._session.delete(obj)
+                self._session.commit()
+                return True
+            else:
+                raise NoResultFound('Object with that id not found')
+        else:
+            raise NoResultFound('Model not found')
