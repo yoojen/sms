@@ -1,134 +1,33 @@
-"""
-from models.courses_departments import *
-from models.teachers_and_degree import *
-from models.teacher_dept import *
-from models.roles_and_admins import *
-from models.teacher_course import *
-from models.assignments import *
-from models.materials_and_matdept import *
-from models.communications import *
-from models.students import *
-from models.submissions import *
-from models.scores import *
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-from datetime import datetime, date
-
-
-engine = create_engine("sqlite:///sims.db", echo=True)
-factory = sessionmaker(bind=engine, expire_on_commit=True)
-Session = scoped_session(factory)
-session = Session()
-
-Base.metadata.drop_all(bind=engine)
-Base.metadata.create_all(bind=engine)
-dept = Department(
-    dept_code="LAW",
-    dept_name="Law",
-    duration=4,
-    trimester_or_semester="Trimester",
-    credits=480,
-    n_teachers=12,
-    hod="5152f7dc-ecf2-4e07-a574-2a4fa32ba7ec"
-)
-course = Course(course_code="BIT1234", course_name="Big data", credits=20, year_of_study=3,
-                start_date=datetime.utcnow(), end_date=datetime.utcnow(), created_by="5152f7dc-ecf2-4e07-a574-2a4fa32ba7ec")
-dept_course = DepartmentCourse(
-    dept_id=dept.dept_code, course_id=course.course_code, date_assigned=datetime.utcnow())
-
-
-seraphin = Teacher(first_name="Tuyishime", last_name="Seraphin", email="seraphin@gmail.com",
-                   password="seraphin123", dob=date(1995, 4, 19), staff_member=False)
-sera_zero = Degree(degree_name="Masters")
-seraphin_degree = TeacherDegree(teacher=seraphin, degree=sera_zero)
-session.add_all([seraphin, sera_zero])
-session.commit()
-
-teacher = Teacher(first_name="Karangwa", last_name="Jean Baptiste",
-                  email="karangwa@gmai.com", password="karangwa123", dob=date(1985, 4, 19), staff_member=True)
-
-a_zero = Degree(degree_name="A0")"""
-"""teacher_azero = TeacherDegree(teacher=teacher, degree=a_zero)"""
-
-"""session.add_all([teacher,
-                a_zero])
-seraphin_dept = TeacherDepartments(
-    teacher=seraphin, department=dept, date_assigned=datetime.utcnow())
-session.add(seraphin_dept)
-session.commit()
-
-yoojen = Admin(first_name="Eugene",
-               last_name="Mutuyimana",
-               email="yoojen@google.com",
-               password="test", dob=datetime.utcnow(),
-               last_login=datetime.utcnow())
-
-
-super_admin = Role(role_name="super admin")
-
-role_admin = RoleAdmin(admin=yoojen, role=super_admin,
-                       date_granted=str(datetime.utcnow()))
-session.add_all([yoojen, super_admin])
-session.commit()
-
-
-mat = Material(course_code="BIT1234", teacher_id="5152f7dc-ecf2-4e07-a574-2a4fa32ba7ec",
-               year_of_study=3, description="Big data book")
-mat_dept = MaterialDepartments(
-    material=mat, department=dept, date_uploaded=datetime.utcnow())
-# one-to-many relationship
-assgn = Assignment(teacher_id="5152f7dc-ecf2-4e07-a574-2a4fa32ba7ec", dept_id="5152f7dc-ecf2-4e07-a574-2a4fa32ba7ec",
-                   course_id="BIT1234", assign_title="analysing data", year_of_study=3, due_date=datetime.utcnow(), file_path="/home")
-session.add(assgn)
-session.commit()
-"""
-
-
 from datetime import datetime
+from models.assignments import Assignment
 from models.materials_and_matdept import Material, MaterialDepartments
 from models.students import Student
 from models.teacher_course import TeacherCourse
 from models.teacher_dept import TeacherDepartments
-from models.teachers_and_degree import *
+from models.teachers_and_degree import Teacher, TeacherDegree, Degree
 from models.roles_and_admins import Admin, Role, RoleAdmin
+from models.scores import Score
 from api.engine import storage
 from models.submissions import Submission
+from models.communications import Communication
 from models.courses_departments import Course, Department, DepartmentCourse
 db = storage.DB()
 
 db.reload()
 
-# eugene = Student(regno=221003870, first_name="MUTUYIMANA", last_name="Eugene",
-#                  email="eugen@gmai.com", password="Eugene123", dob=datetime.utcnow(), dept_id=4, year_of_study=3, citizenship="Rwanda")
-# db.create_object(eugene)
-# yoojen = Admin(first_name="Eugene",
-#                last_name="Mutuyimana",
-#                email="yoojen@google.com",
-#                password="test", dob=datetime.utcnow(),
-#                last_login=datetime.utcnow())
-# db.create_object(yoojen)
-# updated = db.update(Admin, 1, first_name="john")
-# deleted = db.delete(Admin, 1)
+eugene = Student(regno=221003870, first_name="MUTUYIMANA", last_name="Eugene",
+                 email="eugen@gmai.com", password="Eugene123", dob=datetime.utcnow(),
+                 dept_id=4, year_of_study=3, citizenship="Rwanda")
+db.create_object(eugene)
 
-# rmt = Submission(course_code=3, dept_id=4, student_id=221003870,
-#                  assign_id='43', year_of_study=3, file_path='/temp')
-# db.create_object(rmt)
+admin = Admin(first_name="Eugene",
+              last_name="Mutuyimana",
+              email="yoojen@google.com",
+              password="test", dob=datetime.utcnow(),
+              last_login=datetime.utcnow())
 
-# eugene_rmt =
-yoojen = Admin(first_name="Eugene",
-               last_name="Mutuyimana",
-               email="yoojen@google.com",
-               password="test", dob=datetime.utcnow(),
-               last_login=datetime.utcnow())
+db.create_object(admin)
 
-
-super_admin = Role(role_name="super admin")
-
-role_admin = RoleAdmin(admin=yoojen, role=super_admin,
-                       date_granted=str(datetime.utcnow()))
-db.create_object(yoojen)
-db.create_object(super_admin)
-db.create_object(role_admin)
 tchr = Teacher(
     first_name='Mushimwe',
     last_name='Jean',
@@ -137,30 +36,84 @@ tchr = Teacher(
     dob=datetime.utcnow(),
     staff_member=False)
 
-course = Course(course_code="BIT4233", course_name="BIG DATA AND SOCIAL MEDIA", credits=20, year_of_study=3,
-                start_date=datetime.utcnow(), end_date=datetime.utcnow(), created_by=yoojen.id)
-
 created = db.create_object(tchr)
-db.create_object(course)
-tch_course = TeacherCourse(teacher=tchr, course=course,
-                           date_assigned=datetime.utcnow())
-db.create_object(tch_course)
+
 dept = Department(dept_code='BIT', dept_name='BUSINESS INFORMATION TECHNOLOGY',
                   duration=3, trimester_or_semester='Trimester', credits=480, n_teachers=12, hod=tchr.id)
 db.create_object(dept)
+
+comm = Communication(teacher_id=tchr.id, dept_id=dept.dept_code, year_of_study=3,
+                     message='we are having exams this coming monday')
+db.create_object(comm)
+
+course = Course(course_code="BIT4233", course_name="BIG DATA AND SOCIAL MEDIA", credits=20, year_of_study=3,
+                start_date=datetime.utcnow(), end_date=datetime.utcnow(), created_by=admin.id)
+
+db.create_object(course)
+
+assgn = Assignment(teacher_id=tchr.id,
+                   dept_id=dept.dept_code,
+                   course_id=course.course_code, assign_title="analysing data",
+                   year_of_study=3, due_date=datetime.utcnow(), file_path="/home")
+
+db.create_object(assgn)
+
+azero = Degree(degree_name="Masters")
+db.create_object(azero)
+
+dept_course = DepartmentCourse(
+    dept_id=dept.dept_code, course_id=course.course_code, date_assigned=datetime.utcnow())
+db.create_object(dept_course)
+
+mat = Material(course_code=course.course_code, teacher_id=tchr.id,
+               year_of_study=3, description="Big data book", file_path='/bit/big_data')
+
+db.create_object(mat)
+
+mat_dept = MaterialDepartments(
+    material=mat, department=dept, date_uploaded=datetime.utcnow())
+db.create_object(mat_dept)
+
+role = Role(role_name="super admin")
+db.create_object(role)
+new_role = RoleAdmin(admin=admin, role=role,
+                     date_granted=str(datetime.utcnow()))
+db.create_object(new_role)
+
+# student = Student(regno=221104353,
+#                   first_name='Neza',
+#                   last_name='Neda',
+#                   email='no@google.com',
+#                   password='mepass',
+#                   dob=datetime.utcnow(),
+#                   department=dept.dept_code,
+#                   year_of_study=3,
+#                   citizenship="Rwanda")
+# db.create_object(student)
+
+score = Score(teacher_id=tchr.id, student_id=eugene.regno, dept_id=dept.dept_code,
+              course_code=course.course_code, assign_score=15, cat_score=30, exam_score=45)
+
+db.create_object(score)
+
+subm = Submission(course_code=3, dept_id=dept.dept_code, student_id=eugene.regno,
+                  assign_id=assgn.id, year_of_study=3, file_path='/rmt/submission')
+
+db.create_object(subm)
+
+tch_course = TeacherCourse(teacher=tchr, course=course,
+                           date_assigned=datetime.utcnow())
+
+db.create_object(tch_course)
+
 tchr_dept = TeacherDepartments(
     teacher=tchr, department=dept, date_assigned=datetime.utcnow())
 db.create_object(tchr_dept)
-mat = Material(course_code="BIT1234", teacher_id=tchr.id,
-               year_of_study=3, description="Big data book", file_path='/bit/big_data')
-mat_dept = MaterialDepartments(
-    material=mat, department=dept, date_uploaded=datetime.utcnow())
+tchr_degree = TeacherDegree(teacher=tchr, degree=azero)
+db.create_object(tchr_degree)
+# --
 
-db.create_object(mat)
-db.create_object(mat_dept)
 
-course = db.get_by_id(Course, 'BIT4233')
-print(course.creator)
 # dept = db.get_by_id(Department, 'BIT')
 # yoojen = db.get_by_id(Admin, 1)
 
