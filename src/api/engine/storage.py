@@ -69,7 +69,7 @@ class DB:
             self._session.commit()
             return obj
         else:
-            return f'{obj.__repr__} not in known classes'
+            raise ValueError(f'{obj.__repr__} not in known classes')
 
     def get_all_object(self, cls) -> Dict:
         """Query object from the database based on cls"""
