@@ -7,7 +7,7 @@ Base = declarative_base()
 
 
 class BaseModel:
-    DATE_FORMAT = '%d%m%Y, %H:%M:%S'
+    DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
     created_at = Column(
         DateTime, default=datetime.utcnow(), nullable=False)
     updated_at = Column(
