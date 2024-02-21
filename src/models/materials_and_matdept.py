@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.associationproxy import association_proxy
 from models.base_model import BaseModel, Base
-from uuid import uuid4
 
 
 class Material(BaseModel, Base):
@@ -22,6 +21,8 @@ class Material(BaseModel, Base):
     departments = association_proxy("department_association", "department")
 
     teacher = relationship('Teacher', back_populates='materials')
+
+    course = relationship("Course", back_populates="materials")
 
 
 class MaterialDepartments(BaseModel, Base):

@@ -4,7 +4,7 @@ from api.engine import db
 from flask import jsonify
 
 
-@course_blueprint.route('/courses', strict_slashes=False)
+@course_blueprint.route('/courses', methods=['GET'], strict_slashes=False)
 def courses():
     """returns all courses objects from the db"""
     courses_list = []

@@ -7,7 +7,7 @@ class Score(BaseModel, Base):
     """Model for scores table in db storage"""
     __tablename__ = "scores"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    teacher_id = Column(String(50), ForeignKey(
+    teacher_id = Column(Integer, ForeignKey(
         "teachers.id", ondelete='SET NULL'), nullable=False)
     student_id = Column(Integer, ForeignKey(
         "students.regno", ondelete='CASCADE'), nullable=False)

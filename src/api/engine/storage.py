@@ -55,7 +55,7 @@ class DB:
 
     def reload(self) -> None:
         """connect python client to sqlite3 data storage"""
-        Base.metadata.drop_all(bind=self._engine)
+        # Base.metadata.drop_all(bind=self._engine)
         Base.metadata.create_all(bind=self._engine)
         session_factory = sessionmaker(
             bind=self._engine, expire_on_commit=True)
@@ -74,7 +74,7 @@ class DB:
     def get_all_object(self, cls) -> Dict:
         """Query object from the database based on cls"""
         objs = {}
-        if cls in self.classes.keys():
+        if cls in self.classes.values():
             objs = self._session.query(cls).all()
         return objs
 

@@ -67,6 +67,7 @@ class Course(BaseModel, Base):
     end_date = Column(DateTime, nullable=False)
     created_by = Column(String(50), ForeignKey(
         "admins.id", ondelete="SET NULL"))
+    description = Column(String(1000))
 
     #  Many-To-Many relationship
     department_association = relationship(
@@ -81,3 +82,5 @@ class Course(BaseModel, Base):
     scores = relationship("Score", back_populates="course",
                           cascade='all, delete-orphan')
     creator = relationship("Admin", back_populates='courses')
+
+    materials = relationship("Material", back_populates='course')
