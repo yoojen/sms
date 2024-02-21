@@ -4,6 +4,7 @@ from api.engine import db
 from flask import jsonify, request
 from datetime import datetime
 from models.base_model import BaseModel
+from sqlalchemy.exc import NoResultFound
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -11,18 +12,7 @@ BASE_URL = 'http://localhost:5000/api/v1'
 @course_blueprint.route('/courses', methods=['GET'], strict_slashes=False)
 def courses():
     """returns all courses objects from the db"""
-    """
-    courses: [
-        0: [{
-        departments: [list of all departments that has course],
-        materials: [list of all materials related to course],
-        teachers: [all teachers who teach this course],
-        assignment: [list of all assignments],
-        creater: [who created the course]
-        }],
 
-    ]
-    """
     new_obj = {}
     all_courses = []
     courses = db.get_all_object(Course)
@@ -57,6 +47,7 @@ def courses():
 
 @course_blueprint.route('/courses/<code>', methods=['GET'], strict_slashes=False)
 def courses_by_code(code):
+    """endpoint that handle retrival of course by is code"""
     new_obj = {}
     course = db.get_by_id(Course, code)
     if course:
@@ -106,6 +97,7 @@ def courses_by_code(code):
 
 @course_blueprint.route('/courses/', methods=['POST'], strict_slashes=False)
 def create_course():
+    """function that handles creation endpoint for Course instance"""
     data = dict(request.form)
     data['start_date'] = datetime.strptime(
         data['start_date'], BaseModel.DATE_FORMAT)
@@ -118,18 +110,32 @@ def create_course():
             return jsonify(error="Course already exist")
         created = db.create_object(Course(**data))
     except ValueError as e:
-        return jsonify({"message": "Not created", "error": e}), 403
-    return jsonify({"message": "Successfully updated", "id": created.course_name}), 201
+        return jsonify({"message": "Not created", "error": str(e)}), 403
+    return jsonify({"message": "Successfully updated",
+                    "id": created.course_name}), 201
 
 
 @course_blueprint.route('/courses/<code>', methods=['PUT'], strict_slashes=False)
 def update_course(code):
+    """function that handles update endpoint for Course instance"""
     course = db.get_by_id(Course, code)
     if course:
         data = request.form
         updated = db.update(Course, code, **data)
-        return jsonify({"message": "Successfully updated", "id": updated.course_code}), 201
+        return jsonify({"message": "Successfully updated",
+                        "id": updated.course_code}), 201
     return jsonify(error="Not found"), 403
+
+
+@course_blueprint.route('/courses/<code>', methods=['DELETE'], strict_slashes=False)
+def delete_course(code):
+    """function for delete endpoint, it handles course deletion"""
+
+    try:
+        db.delete(Course, code)
+    except NoResultFound as e:
+        return jsonify(error=str(e)), 403
+    return jsonify(message="Successfully deleted course"), 200
 
 
 def find_course_scores(code):
