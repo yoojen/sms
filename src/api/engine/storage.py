@@ -85,6 +85,8 @@ class DB:
         obj = {}
 
         if cls in self.classes.values():
+            self._session.close()
+            self._session.begin()
             if (cls == self.classes['Course']):
                 obj = self._session.query(cls).filter(
                     cls.course_code == id).first()
