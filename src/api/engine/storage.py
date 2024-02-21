@@ -75,6 +75,8 @@ class DB:
         """Query object from the database based on cls"""
         objs = {}
         if cls in self.classes.values():
+            self._session.close()
+            self._session.begin()
             objs = self._session.query(cls).all()
         return objs
 
