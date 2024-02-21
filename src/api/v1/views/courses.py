@@ -1,8 +1,9 @@
 from models.courses_departments import Course, Department, DepartmentCourse
 from api.v1.views import course_blueprint
 from api.engine import db
-import requests
 from flask import jsonify, request
+from datetime import datetime
+from models.base_model import BaseModel
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -51,7 +52,7 @@ def courses():
         new_obj['creator'] = creator
         all_courses.append(new_obj)
         new_obj = {}
-    return jsonify({"courses": all_courses})
+    return jsonify({"courses": all_courses}), 200
 
 
 @course_blueprint.route('/courses/<code>', methods=['GET'], strict_slashes=False)
@@ -87,20 +88,48 @@ def courses_by_code(code):
             if 'score' == list(request.args)[0]:
                 course_scores = find_course_scores(code)
                 return jsonify({"scores": {"course": course.course_code,
-                                           "score": course_scores}})
+                                           "score": course_scores}}), 200
             elif 'departments' == list(request.args)[0]:
                 dept_with_crs = find_department_with_course(code)
                 return jsonify({"departments": {"course": course.course_code,
-                                                "departments": dept_with_crs}})
+                                                "departments": dept_with_crs}}), 200
             elif 'materials' == list(request.args)[0]:
                 crs_materials = find_crs_materials(code)
                 return jsonify({"materials": {"course": course.course_code,
-                                              "materials": crs_materials}})
+                                              "materials": crs_materials}}), 200
             else:
                 return jsonify({"message":
-                                f"{list(request.args)[0]} not implemented"})
+                                f"{list(request.args)[0]} not implemented"}), 400
 
-    return jsonify({"course": new_obj})
+    return jsonify({"course": new_obj}), 200
+
+
+@course_blueprint.route('/courses/', methods=['POST'], strict_slashes=False)
+def create_course():
+    data = dict(request.form)
+    data['start_date'] = datetime.strptime(
+        data['start_date'], BaseModel.DATE_FORMAT)
+    data['end_date'] = datetime.strptime(
+        data['end_date'], BaseModel.DATE_FORMAT)
+    try:
+        # check if it exists
+        find_couse = db.get_by_id(Course, data['course_code'])
+        if find_couse:
+            return jsonify(error="Course already exist")
+        created = db.create_object(Course(**data))
+    except ValueError as e:
+        return jsonify({"message": "Not created", "error": e}), 403
+    return jsonify({"message": "Successfully updated", "id": created.course_name}), 201
+
+
+@course_blueprint.route('/courses/<code>', methods=['PUT'], strict_slashes=False)
+def update_course(code):
+    course = db.get_by_id(Course, code)
+    if course:
+        data = request.form
+        updated = db.update(Course, code, **data)
+        return jsonify({"message": "Successfully updated", "id": updated.course_code}), 201
+    return jsonify(error="Not found"), 403
 
 
 def find_course_scores(code):
