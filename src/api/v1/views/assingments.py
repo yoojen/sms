@@ -128,11 +128,7 @@ def find_assignm_submissions(assignment):
 
 def find_assingm_teachers(assignm):
     """find course that are associated with the department"""
-    all_teachers = []
-    tchrs = assignm.courses
-    for tchr in tchrs:
-        all_teachers.append(tchr.to_json())
-    return all_teachers
+    return assignm.teachers.to_json()
 
 
 def args_handler(assignment, args):
@@ -142,12 +138,12 @@ def args_handler(assignment, args):
     if args.get('submissions') == 'true':
         assignm_submissions = find_assignm_submissions(assignment)
         status_code = 200
-        return jsonify({"assingment": assignment.id,
+        return jsonify({"assingment": assignment.assign_title,
                         "submissions": assignm_submissions}), status_code
     elif args.get('teachers') == 'true':
-        assig_teacher = find_assingm_teachers()
+        assig_teacher = find_assingm_teachers(assignment)
         status_code = 200
-        return {f"{assignment.id} teacher": assig_teacher}, status_code
+        return {f"{assignment.assign_title} teacher": assig_teacher}, status_code
     else:
         status_code = 400
         return {"ERROR": "Not implemented"}, status_code

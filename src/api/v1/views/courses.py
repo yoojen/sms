@@ -17,7 +17,6 @@ def courses():
     all_courses = []
     courses = db.get_all_object(Course)
     for course in courses:
-        print(course)
         departments = [
             f'{BASE_URL}/departments/{depts.dept_code}'
             for depts in course.departments]
