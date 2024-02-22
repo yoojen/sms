@@ -2,7 +2,8 @@ from flask import Flask, jsonify
 from api.v1.views import (course_blueprint,
                           dept_blueprint,
                           assignm_blueprint,
-                          comm_blueprint)
+                          comm_blueprint,
+                          material_blueprint)
 
 
 HOST = '127.0.0.1'
@@ -12,6 +13,7 @@ app.register_blueprint(course_blueprint)
 app.register_blueprint(dept_blueprint)
 app.register_blueprint(assignm_blueprint)
 app.register_blueprint(comm_blueprint)
+app.register_blueprint(material_blueprint)
 
 
 @app.route('/')
