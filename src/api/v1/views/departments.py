@@ -128,8 +128,14 @@ def create_department():
 def update_department(code):
     """ function that handles update endpoint for Department instance"""
     try:
-        data = request.form
-        # print(data)
+        data = dict(request.form)
+        if data.get('duration'):
+            data['duration'] = int(data.get('duration'))
+        if data.get('credits'):
+            data['credits'] = int(data.get('credits'))
+        if data.get('n_teachers'):
+            data['n_teachers'] = int(data.get('n_teachers'))
+
         updated = db.update(Department, code, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400

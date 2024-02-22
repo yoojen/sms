@@ -11,7 +11,7 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @comm_blueprint.route('/communications', methods=['GET'], strict_slashes=False)
-def assignments():
+def communications():
     """returns all Communication objects from the db"""
 
     new_obj = {}
@@ -33,7 +33,7 @@ def assignments():
 
 
 @comm_blueprint.route('/communications/<int:id>', methods=['GET'], strict_slashes=False)
-def one_assignment(id):
+def single_communication(id):
     """ endpoint that handle retrival of department by is code"""
     new_obj = {}
     comm = db.get_by_id(Communication, id)
