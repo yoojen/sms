@@ -61,7 +61,6 @@ def one_department(code):
     """ endpoint that handle retrival of department by is code"""
     new_obj = {}
     dept = db.get_by_id(Department, code)
-    print(dept)
     if dept:
         courses = [
             f'{BASE_URL}/courses/{course.course_code}'
