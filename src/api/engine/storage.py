@@ -108,8 +108,12 @@ class DB:
             obj = self.get_by_id(cls, id)
             if obj:
                 for k, v in kwargs.items():
-                    if obj.__dict__.get(k) == v:
-                        raise ValueError("can not be the same")
+                    if obj.__dict__.get(k) == int(v):
+                        raise ValueError(
+                            "attribute can not be the same as old")
+                    if k not in obj.__dict__.keys():
+                        raise KeyError(
+                            f"{obj.__class__.__name__} does not have {k}")
                     setattr(obj, k, v)
                     self._session.commit()
             else:

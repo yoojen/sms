@@ -76,21 +76,23 @@ def courses_by_code(code):
 
         # handling url args
         if request.args:
-            if 'score' == list(request.args)[0]:
+            args_dict = dict(request.args)
+            if len(args_dict) > 1:
+                return jsonify(message="Not implemented")
+            if args_dict.get('score') == 'true':
                 course_scores = find_course_scores(code)
                 return jsonify({"scores": {"course": course.course_code,
                                            "score": course_scores}}), 200
-            elif 'departments' == list(request.args)[0]:
+            elif args_dict.get('departments') == 'true':
                 dept_with_crs = find_department_with_course(code)
                 return jsonify({"departments": {"course": course.course_code,
                                                 "departments": dept_with_crs}}), 200
-            elif 'materials' == list(request.args)[0]:
+            elif args_dict.get('materials') == 'true':
                 crs_materials = find_crs_materials(code)
                 return jsonify({"materials": {"course": course.course_code,
                                               "materials": crs_materials}}), 200
             else:
-                return jsonify({"message":
-                                f"{list(request.args)[0]} not implemented"}), 400
+                return jsonify(message="Not implemented"), 400
 
     return jsonify({"course": new_obj}), 200
 
@@ -110,7 +112,7 @@ def create_course():
             return jsonify(error="Course already exist")
         created = db.create_object(Course(**data))
     except ValueError as e:
-        return jsonify({"message": "Not created", "error": str(e)}), 403
+        return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully updated",
                     "id": created.course_name}), 201
 
@@ -124,7 +126,7 @@ def update_course(code):
         updated = db.update(Course, code, **data)
         return jsonify({"message": "Successfully updated",
                         "id": updated.course_code}), 201
-    return jsonify(error="Not found"), 403
+    return jsonify(error="Not found"), 400
 
 
 @course_blueprint.route('/courses/<code>', methods=['DELETE'], strict_slashes=False)
@@ -134,13 +136,14 @@ def delete_course(code):
     try:
         db.delete(Course, code)
     except NoResultFound as e:
-        return jsonify(error=str(e)), 403
+        return jsonify(error=str(e)), 400
     return jsonify(message="Successfully deleted course"), 200
 
 
 def find_course_scores(code):
+    """find scores that related to course"""
     all_scores = []
-    course = course = db.get_by_id(Course, code)
+    course = db.get_by_id(Course, code)
     scores = course.scores
     for score in scores:
         all_scores.append(score.to_json())
@@ -148,8 +151,9 @@ def find_course_scores(code):
 
 
 def find_department_with_course(code):
+    """find department that has current course"""
     all_depts = []
-    course = course = db.get_by_id(Course, code)
+    course = db.get_by_id(Course, code)
     depts = course.departments
     for dept in depts:
         all_depts.append(dept.to_json())
@@ -157,8 +161,9 @@ def find_department_with_course(code):
 
 
 def find_crs_materials(code):
+    """find course materials"""
     all_materials = []
-    course = course = db.get_by_id(Course, code)
+    course = db.get_by_id(Course, code)
     materials = course.materials
     for mat in materials:
         all_materials.append(mat.to_json())
