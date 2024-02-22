@@ -3,7 +3,8 @@ from api.v1.views import roles_n_admin_bp
 from api.engine import db
 from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound
-
+from models.base_model import BaseModel
+from datetime import datetime
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -94,6 +95,114 @@ def delete_role(id):
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted role"), 200
+
+
+# admins endpoints
+@roles_n_admin_bp.route('/admins', methods=['GET'], strict_slashes=False)
+def admins():
+    """returns all Admin objects from the db"""
+    new_obj = {}
+    all_admins = []
+    admins = db.get_all_object(Admin)
+    for admin in admins:
+        roles = [
+            f'{BASE_URL}/roles/{role.id}'
+            for role in admin.roles]
+        course_created = [
+            f'{BASE_URL}/courses/{course.course_code}'
+            for course in admin.courses]
+        for k, v in admin.to_json().items():
+            if k in ['id', 'first_name', 'last_name', 'email', 'password',
+                     'dob', 'last_login', 'created_at', 'updated_at']:
+                new_obj[k] = v
+        new_obj['roles'] = roles
+        new_obj['course_created'] = course_created
+        all_admins.append(new_obj)
+        new_obj = {}
+    return jsonify({"admins": all_admins}), 200
+
+
+@roles_n_admin_bp.route('/admins/<int:id>', methods=['GET'], strict_slashes=False)
+def one_admin(id):
+    """returns all Admin objects from the db"""
+    new_obj = {}
+    admin = db.get_by_id(Admin, id)
+    if admin:
+        roles = [
+            f'{BASE_URL}/roles/{role.id}'
+            for role in admin.roles]
+        course_created = [
+            f'{BASE_URL}/courses/{course.course_code}'
+            for course in admin.courses]
+        for k, v in admin.to_json().items():
+            if k in ['id', 'first_name', 'last_name', 'email', 'password',
+                     'dob', 'last_login', 'created_at', 'updated_at']:
+                new_obj[k] = v
+        new_obj['roles'] = roles
+        new_obj['course_created'] = course_created
+
+        # handling url args
+        if request.args:
+            args_dict = dict(request.args)
+            if args_dict.get('roles') == 'true':
+                roles = [role.to_json() for role in admin.roles]
+                return jsonify(roles=roles), 200
+            elif args_dict.get('courses') == 'true':
+                courses = [crs.to_json() for crs in admin.courses]
+                return jsonify(courses=courses), 200
+            else:
+                return jsonify(ERROR='Not implemented'), 400
+        return jsonify({"admins": new_obj}), 200
+    else:
+        return jsonify(ERROR="Not found"), 404
+
+
+@roles_n_admin_bp.route('/admins/', methods=['POST'], strict_slashes=False)
+def create_admin():
+    """function that handles creation endpoint for Admin instance"""
+    data = dict(request.form)
+    data['dob'] = datetime.strptime(data.get('dob'), BaseModel.DATE_FORMAT)
+    try:
+        # check if it exists
+        admin = db.get_by_id(Admin, data.get('id'))
+        if admin:
+            return jsonify(error="Admin already exist")
+        created = db.create_object(Admin(**data))
+    except Exception as e:
+        return jsonify({"message": "Not created", "error": str(e)}), 400
+    return jsonify({"message": "Successfully created",
+                    "role": created.email}), 201
+
+
+@roles_n_admin_bp.route('/admins/<int:id>', methods=['PUT'],
+                        strict_slashes=False)
+def update_admin(id):
+    """ function that handles update endpoint for Admin instance"""
+    try:
+        data = dict(request.form)
+        if data.get('dob'):
+            data['dob'] = datetime.strptime(data.get('dob'),
+                                            BaseModel.DATE_FORMAT)
+        if data.get('last_login'):
+            data['last_login'] = datetime.strptime(data.get('last_login'),
+                                                   BaseModel.DATE_FORMAT)
+
+        updated = db.update(Admin, id, **data)
+    except Exception as error:
+        return jsonify(ERROR=str(error)), 400
+    return jsonify({"message": "Successfully updated",
+                    "id": updated.email}), 201
+
+
+@roles_n_admin_bp.route('/admins/<int:id>', methods=['DELETE'],
+                        strict_slashes=False)
+def delete_admin(id):
+    """function for delete endpoint, it handles Admin deletion"""
+    try:
+        db.delete(Admin, id)
+    except NoResultFound as e:
+        return jsonify(ERROR=str(e)), 400
+    return jsonify(message="Successfully deleted admin"), 200
 
 
 def find_admin_with_role(role):
