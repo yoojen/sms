@@ -10,3 +10,6 @@ comm_blueprint = Blueprint('comm_blueprint', __name__, url_prefix='/api/v1')
 
 material_blueprint = Blueprint(
     'material_blueprint', __name__, url_prefix='/api/v1')
+
+roles_n_admin_bp = Blueprint(
+    'roles_n_admin_bp', __name__, url_prefix='/api/v1')
