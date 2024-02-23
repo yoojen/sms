@@ -77,7 +77,7 @@ def create_material():
         # check if it exists
         find_dept = db.get_by_id(Material, data.get('id'))
         if find_dept:
-            return jsonify(error="Material already exist")
+            return jsonify(error="Material already exist"), 409
         created = db.create_object(Material(**data))
     except ValueError as e:
         return jsonify({"message": "Not created", "error": str(e)}), 400
