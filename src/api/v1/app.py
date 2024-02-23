@@ -4,7 +4,8 @@ from api.v1.views import (course_blueprint,
                           assignm_blueprint,
                           comm_blueprint,
                           material_blueprint,
-                          roles_n_admin_bp)
+                          roles_n_admin_bp,
+                          score_blueprint)
 
 
 HOST = '127.0.0.1'
@@ -16,6 +17,7 @@ app.register_blueprint(assignm_blueprint)
 app.register_blueprint(comm_blueprint)
 app.register_blueprint(material_blueprint)
 app.register_blueprint(roles_n_admin_bp)
+app.register_blueprint(score_blueprint)
 
 
 @app.route('/')
