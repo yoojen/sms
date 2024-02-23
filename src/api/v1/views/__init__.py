@@ -18,3 +18,5 @@ score_blueprint = Blueprint('score_blueprint', __name__, url_prefix='/api/v1')
 
 students_blueprint = Blueprint(
     "students_blueprint", __name__, url_prefix='/api/v1')
+
+submission_bp = Blueprint('submission_bp', __name__, url_prefix='/api/v1')

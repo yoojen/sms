@@ -34,7 +34,7 @@ def students():
             all_students.append(new_obj)
             new_obj = {}
         return jsonify({"students": all_students}), 200
-    return jsonify(message="Nothing found"), 200
+    return jsonify(message="Nothing found"), 404
 
 
 @students_blueprint.route('/students/<int:regno>', methods=['GET'], strict_slashes=False)
@@ -57,7 +57,7 @@ def single_students(regno):
         new_obj['scores'] = scores
         new_obj['department'] = department
         return jsonify({"students": new_obj}), 200
-    return jsonify(message="Nothing found"), 200
+    return jsonify(message="Nothing found"), 404
 
 
 @students_blueprint.route('/students', methods=['POST'],
@@ -95,7 +95,7 @@ def update_student(regno):
 @students_blueprint.route('/students/<int:regno>', methods=['DELETE'],
                           strict_slashes=False)
 def delete_student(regno):
-    """function for delete endpoint, it handles Score deletion"""
+    """function for delete endpoint, it handles Student deletion"""
 
     try:
         db.delete(Student, regno)
