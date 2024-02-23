@@ -99,7 +99,7 @@ def update_score(id):
 
 @score_blueprint.route('/scores/<int:id>', methods=['DELETE'],
                        strict_slashes=False)
-def delete_material(id):
+def delete_score(id):
     """function for delete endpoint, it handles Score deletion"""
 
     try:

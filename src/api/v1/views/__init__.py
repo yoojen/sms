@@ -15,3 +15,6 @@ roles_n_admin_bp = Blueprint(
     'roles_n_admin_bp', __name__, url_prefix='/api/v1')
 
 score_blueprint = Blueprint('score_blueprint', __name__, url_prefix='/api/v1')
+
+students_blueprint = Blueprint(
+    "students_blueprint", __name__, url_prefix='/api/v1')

@@ -19,7 +19,8 @@ class Student(BaseModel, Base):
     citizenship = Column(String(50), nullable=False)
     last_login = Column(DateTime)
 
-    scores = relationship("Score", back_populates="student")
+    scores = relationship("Score", back_populates="student",
+                          cascade='delete, delete-orphan')
     submissions = relationship(
-        "Submission", back_populates="student")
+        "Submission", back_populates="student", cascade='delete, delete-orphan')
     department = relationship("Department", back_populates="students")

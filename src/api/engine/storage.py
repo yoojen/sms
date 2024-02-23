@@ -113,7 +113,7 @@ class DB:
                             "attribute can not be the same as old")
                     if k not in obj.__dict__.keys():
                         raise KeyError(
-                            f"{obj.__class__.__name__} does not have {k}")
+                            f"{obj.__class__.__name__} does not have key: {k}")
                     setattr(obj, k, v)
                     self._session.commit()
             else:
