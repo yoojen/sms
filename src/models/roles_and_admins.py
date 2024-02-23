@@ -12,7 +12,7 @@ class Role(BaseModel, Base):
     role_name = Column(String(50), nullable=False)
 
     admins_association = relationship(
-        "RoleAdmin", back_populates="role", cascade='all, delete-orphan')
+        "RoleAdmin", back_populates="role", cascade='delete, delete-orphan')
     admins = association_proxy("admins_association", "admin")
 
 
@@ -42,7 +42,7 @@ class Admin(BaseModel, Base):
     last_login = Column(DateTime)
 
     roles_association = relationship(
-        "RoleAdmin", back_populates="admin", cascade='all, delete-orphan')
+        "RoleAdmin", back_populates="admin", cascade='delete,delete-orphan')
     roles = association_proxy("roles_association", "role")
 
     courses = relationship('Course', back_populates='creator')

@@ -108,6 +108,7 @@ class DB:
             obj = self.get_by_id(cls, id)
             if obj:
                 for k, v in kwargs.items():
+                    print(obj.__dict__.get(k), (k, v))
                     if obj.__dict__.get(k) == v:
                         raise ValueError(
                             "attribute can not be the same as old")
