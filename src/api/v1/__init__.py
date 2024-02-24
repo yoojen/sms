@@ -9,3 +9,4 @@ from api.v1.views.students import *
 from api.v1.views.submissions import *
 from api.v1.views.teachers import *
 from api.v1.views.degrees import *
+from api.v1.views.teacher_dept import *
