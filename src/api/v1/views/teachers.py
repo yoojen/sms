@@ -22,7 +22,7 @@ def teachers():
             scored = [
                 f'{BASE_URL}/scores/{score.id }' for score in tchr.scored]
             degrees = [
-                f'{BASE_URL}/degrees/{degree.id }' for degree in tchr.degrees]
+                f'{BASE_URL}/degrees/{degree.id }' for degree in tchr.degrees if degree]
             courses = [
                 f'{BASE_URL}/courses/{course.course_code }' for course in tchr.courses]
             assignments = [

@@ -1,4 +1,4 @@
-from models.teachers_and_degree import Degree
+from models.teachers_and_degree import Degree, TeacherDegree
 from api.v1.views import degree_bp
 from api.engine import db
 from flask import jsonify, request
@@ -90,3 +90,96 @@ def delete_degree(id):
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted a degree"), 200
+
+
+# teacher_degree association endpoints
+@degree_bp.route('/teacher_degree', methods=['GET'], strict_slashes=False)
+def teacher_degree():
+    """return all teacher and degree associations"""
+    new_obj = {}
+    all_associations = []
+    tchr_degree_associationss = db.get_all_object(TeacherDegree)
+    if tchr_degree_associationss:
+        for td in tchr_degree_associationss:
+            teachers = [
+                td.teacher.to_json() if td.teacher else None]
+            degrees = [
+                td.degree.to_json() if td.degree else None]
+
+            for k, v in td.to_json().items():
+                if k in ['id', 'teacher_id', 'degree_id',
+                         'created_at', 'updated_at']:
+                    new_obj[k] = v
+            new_obj['teachers'] = teachers
+            new_obj['degrees'] = degrees
+            all_associations.append(new_obj)
+            new_obj = {}
+        return jsonify({"teacher degree associations": all_associations}), 200
+    else:
+        return jsonify(ERROR='Nothing found'), 404
+
+
+@degree_bp.route('/teacher_degree/<int:id>', methods=['GET'],
+                 strict_slashes=False)
+def single_teacher_degree(id):
+    """return a teacher degree association based on teacher id"""
+    new_obj = {}
+    td = db.get_by_id(TeacherDegree, id)
+    if td:
+        teachers = [
+            td.teacher.to_json() if td.teacher else None]
+        degrees = [
+            td.degree.to_json() if td.degree else None]
+
+        for k, v in td.to_json().items():
+            if k in ['id', 'teacher_id', 'degree_id',
+                     'created_at', 'updated_at']:
+                new_obj[k] = v
+        new_obj['teachers'] = teachers
+        new_obj['degrees'] = degrees
+        return jsonify({"td association": new_obj}), 200
+    else:
+        return jsonify(ERROR="Nothing found")
+
+
+@degree_bp.route('/teacher_degree', methods=['POST'], strict_slashes=False)
+def create_teacherdegree_association():
+    """create a teacher degree association instance"""
+    data = dict(request.form)
+    try:
+        # check if it exists
+        # CHECK IF TEACHER AND DEGREE IDS ALREDY ARE THERE
+        created = db.create_object(TeacherDegree(**data))
+    except Exception as e:
+        db._session.rollback()
+        return jsonify({"message": "Not created", "error": str(e)}), 400
+    return jsonify({"message": "Successfully created", "id": created.id}), 201
+
+
+@degree_bp.route('/teacher_degree/<int:id>', methods=['PUT'], strict_slashes=False)
+def update_association_object(id):
+    """update teacher degree association object"""
+    data = dict(request.form)
+    if data.get('teacher_id'):
+        data['teacher_id'] = int(data['teacher_id'])
+    if data.get('degree_id'):
+        data['degree_id'] = int(data['degree_id'])
+    try:
+        # NORMALLY, CHECK ROW WITH TEACHER AND DEGREE ID
+        # IF FOUND UPDATE ANY COLUMN
+        updated = db.update(TeacherDegree, id, **data)
+    except Exception as error:
+        return jsonify(ERROR=str(error)), 400
+    return jsonify({"message": "Successfully updated",
+                    "id": updated.id}), 201
+
+
+@degree_bp.route('/teacher_degree/<int:id>', methods=['DELETE'], strict_slashes=False)
+def remove_association(id):
+    """remove association between degree and teacher"""
+
+    try:
+        db.delete(TeacherDegree, id)
+    except NoResultFound as e:
+        return jsonify(ERROR=str(e)), 400
+    return jsonify(message="Successfully deleted an association"), 200
