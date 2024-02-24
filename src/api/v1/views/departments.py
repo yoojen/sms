@@ -1,8 +1,11 @@
 from models.courses_departments import Department
+from models.materials_and_matdept import MaterialDepartments
+from models.base_model import BaseModel
 from api.v1.views import dept_blueprint
 from api.engine import db
 from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound
+from datetime import datetime
 
 
 BASE_URL = 'http://localhost:5000/api/v1'
@@ -152,6 +155,101 @@ def delete_department(code):
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted course"), 200
+
+
+# DEPARTMENT AND MATERIALS ASSOCIATION ENDPOINTS
+@dept_blueprint.route('/dept_material', methods=['GET'], strict_slashes=False)
+def dept_material():
+    """return all department and material associations"""
+    new_obj = {}
+    all_associations = []
+    dept_mat_assoc = db.get_all_object(MaterialDepartments)
+    if dept_mat_assoc:
+        for td in dept_mat_assoc:
+            department = [
+                td.department.to_json() if td.department else None]
+            material = [
+                td.material.to_json() if td.material else None]
+
+            for k, v in td.to_json().items():
+                if k in ['id', 'date_uploaded',
+                         'created_at', 'updated_at']:
+                    new_obj[k] = v
+            new_obj['department'] = department
+            new_obj['material'] = material
+            all_associations.append(new_obj)
+            new_obj = {}
+        return jsonify({"department-materials associations": all_associations}), 200
+    else:
+        return jsonify(ERROR='Nothing found'), 404
+
+
+@dept_blueprint.route('/dept_material/<int:id>', methods=['GET'],
+                      strict_slashes=False)
+def single_dept_material(id):
+    """return a department-material association"""
+    new_obj = {}
+    td = db.get_by_id(MaterialDepartments, id)
+    if td:
+        department = [
+            td.department.to_json() if td.department else None]
+        material = [
+            td.material.to_json() if td.material else None]
+
+        for k, v in td.to_json().items():
+            if k in ['id', 'date_uploaded',
+                     'created_at', 'updated_at']:
+                new_obj[k] = v
+        new_obj['department'] = department
+        new_obj['material'] = material
+        return jsonify({"dept-material association": new_obj}), 200
+    else:
+        return jsonify(ERROR="Nothing found")
+
+
+@dept_blueprint.route('/dept_material', methods=['POST'], strict_slashes=False)
+def create_dept_material_ass():
+    """create a department-material association instance"""
+    data = dict(request.form)
+    if data.get('date_uploaded'):
+        data['date_uploaded'] = datetime.strptime(
+            data['date_uploaded'], BaseModel.DATE_FORMAT)
+    try:
+        # check if it exists
+        # CHECK IF TEACHER AND DEPARTMENT IDS ALREDY ARE THERE
+        created = db.create_object(MaterialDepartments(**data))
+    except Exception as e:
+        db._session.rollback()
+        return jsonify({"message": "Not created", "error": str(e)}), 400
+    return jsonify({"message": "Successfully created", "id": created.id}), 201
+
+
+@dept_blueprint.route('/dept_material/<int:id>', methods=['PUT'], strict_slashes=False)
+def update_dept_material(id):
+    """update department-material association object"""
+    data = dict(request.form)
+    if data.get('date_uploaded'):
+        data['date_uploaded'] = datetime.strptime(
+            data['date_uploaded'], BaseModel.DATE_FORMAT)
+    try:
+        # NORMALLY, CHECK ROW WITH TEACHER AND DEGREE ID
+        # IF FOUND UPDATE ANY COLUMN
+        updated = db.update(MaterialDepartments, id, **data)
+    except Exception as error:
+        return jsonify(ERROR=str(error)), 400
+    return jsonify({"message": "Successfully updated",
+                    "id": updated.id}), 201
+
+
+@dept_blueprint.route('/dept_material/<int:id>', methods=['DELETE'], strict_slashes=False)
+def remove_dept_crs(id):
+    """remove association between department-material"""
+
+    try:
+        db.delete(MaterialDepartments, id)
+    except NoResultFound as e:
+        return jsonify(ERROR=str(e)), 400
+    return jsonify(message="Successfully deleted an association"), 200
 
 
 # helpers
