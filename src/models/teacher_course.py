@@ -8,7 +8,7 @@ class TeacherCourse(BaseModel, Base):
     """Model for teacher_courses table in db storage"""
     __tablename__ = "teacher_courses"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    teacher_id = Column(String(50), ForeignKey(
+    teacher_id = Column(Integer, ForeignKey(
         "teachers.id", ondelete='CASCADE'), nullable=False)
     course_code = Column(String(10), ForeignKey(
         "courses.course_code", ondelete='CASCADE'), nullable=False)
