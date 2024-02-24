@@ -18,8 +18,8 @@ def communications():
     all_comms = []
     comms = db.get_all_object(Communication)
     for comm in comms:
-        departments = f'{BASE_URL}/departments/{comm.departments.dept_code}'
-        teacher = f'{BASE_URL}/teachers/{comm.teachers.id}'
+        departments = f'{BASE_URL}/departments/{comm.departments.dept_code}' if comm.departments else None
+        teacher = f'{BASE_URL}/teachers/{comm.teachers.id}' if comm.teachers else None
 
         for k, v in comm.to_json().items():
             if k in ['id', 'teacher_id', 'dept_id', 'year_of_study',

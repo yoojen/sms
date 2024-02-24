@@ -29,7 +29,7 @@ class MaterialDepartments(BaseModel, Base):
     """Model for materials_departments table in db storage"""
     __tablename__ = "materials_departments"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    material_id = Column(String(50), ForeignKey(
+    material_id = Column(Integer, ForeignKey(
         "materials.id", ondelete='CASCADE'), nullable=False)
     department_id = Column(String(10), ForeignKey(
         "departments.dept_code", ondelete='CASCADE'), nullable=False)

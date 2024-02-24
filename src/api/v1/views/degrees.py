@@ -71,7 +71,6 @@ def create_degree():
 def update_degree(id):
     """ function that handles update endpoint for Degree instance"""
     data = dict(request.form)
-
     try:
         updated = db.update(Degree, id, **data)
     except Exception as error:
@@ -146,9 +145,13 @@ def single_teacher_degree(id):
 def create_teacherdegree_association():
     """create a teacher degree association instance"""
     data = dict(request.form)
+    data['teacher_id'] = int(data.get('teacher_id'))
+
     try:
         # check if it exists
-        # CHECK IF TEACHER AND DEGREE IDS ALREDY ARE THERE
+        assoc = db.search(TeacherDegree, **data)
+        if assoc:
+            return jsonify(ERROR='Association alredy exists'), 409
         created = db.create_object(TeacherDegree(**data))
     except Exception as e:
         db._session.rollback()

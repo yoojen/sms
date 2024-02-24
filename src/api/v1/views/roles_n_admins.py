@@ -1,6 +1,7 @@
 from models.roles_and_admins import Role, Admin, RoleAdmin
 from api.v1.views import roles_n_admin_bp
 from api.engine import db
+import bcrypt
 from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
@@ -162,6 +163,9 @@ def create_admin():
     """function that handles creation endpoint for Admin instance"""
     data = dict(request.form)
     data['dob'] = datetime.strptime(data.get('dob'), BaseModel.DATE_FORMAT)
+    password_bytes = data.get('password').encode()
+    hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+    data['password'] = hashed_password
     try:
         # check if it exists
         admin = db.get_by_id(Admin, data.get('id'))

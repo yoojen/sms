@@ -2,6 +2,7 @@ from models.students import Student
 from api.v1.views import students_blueprint
 from api.engine import db
 from flask import jsonify, request
+import bcrypt
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import datetime
@@ -67,6 +68,9 @@ def create_student():
     data = dict(request.form)
     if data.get('dob'):
         data['dob'] = datetime.strptime(data.get('dob'), BaseModel.DATE_FORMAT)
+    password_bytes = data.get('password').encode()
+    hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+    data['password'] = hashed_password
     try:
         # check if it exists
         find_Score = db.get_by_id(Student, data.get('regno'))

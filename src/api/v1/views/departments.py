@@ -216,7 +216,9 @@ def create_dept_material_ass():
             data['date_uploaded'], BaseModel.DATE_FORMAT)
     try:
         # check if it exists
-        # CHECK IF TEACHER AND DEPARTMENT IDS ALREDY ARE THERE
+        assoc = db.search(MaterialDepartments, **data)
+        if assoc:
+            return jsonify(ERROR='Association alredy exists'), 409
         created = db.create_object(MaterialDepartments(**data))
     except Exception as e:
         db._session.rollback()
@@ -231,9 +233,10 @@ def update_dept_material(id):
     if data.get('date_uploaded'):
         data['date_uploaded'] = datetime.strptime(
             data['date_uploaded'], BaseModel.DATE_FORMAT)
+    if data.get('material_id'):
+        data['material_id'] = int(data['material_id'])
     try:
-        # NORMALLY, CHECK ROW WITH TEACHER AND DEGREE ID
-        # IF FOUND UPDATE ANY COLUMN
+        # check existance
         updated = db.update(MaterialDepartments, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400

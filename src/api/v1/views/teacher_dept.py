@@ -65,9 +65,12 @@ def create_teacher_association():
     if data.get('date_assigned'):
         data['date_assigned'] = datetime.strptime(
             data['date_assigned'], BaseModel.DATE_FORMAT)
+    data['teacher_id'] = int(data.get('teacher_id'))
     try:
         # check if it exists
-        # CHECK IF TEACHER AND DEPARTMENT IDS ALREDY ARE THERE
+        assoc = db.search(TeacherDepartments, **data)
+        if assoc:
+            return jsonify(ERROR='Association alredy exists'), 409
         created = db.create_object(TeacherDepartments(**data))
     except Exception as e:
         db._session.rollback()
