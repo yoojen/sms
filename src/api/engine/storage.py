@@ -115,7 +115,7 @@ class DB:
                         raise KeyError(
                             f"{obj.__class__.__name__} does not have key: {k}")
                     setattr(obj, k, v)
-                    self._session.commit()
+                self._session.commit()
             else:
                 raise NoResultFound('Object with that id not found')
             return obj
@@ -136,3 +136,11 @@ class DB:
                 raise NoResultFound('Object with that id not found')
         else:
             raise NoResultFound('Model not found')
+
+    def search(self, cls, **kwargs):
+        """search an item from db based on passed kwargs and cls(Class)"""
+        objects = self._session.query(cls).filter_by(**kwargs).all()
+        if objects:
+            return objects
+        else:
+            return []
