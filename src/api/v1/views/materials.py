@@ -28,7 +28,7 @@ def materials():
 
         for k, v in material.to_json().items():
             if k in ['id', 'course_code', 'teacher_id', 'year_of_study',
-                     'description', 'file_path', 'created_at', 'updated_at']:
+                     'description', 'link', 'created_at', 'updated_at']:
                 new_obj[k] = v
         new_obj['departments'] = departments
         new_obj['course'] = course
@@ -55,7 +55,7 @@ def single_materials(id):
 
         for k, v in material.to_json().items():
             if k in ['id', 'course_code', 'teacher_id', 'year_of_study',
-                     'description', 'file_path', 'created_at', 'updated_at']:
+                     'description', 'link', 'created_at', 'updated_at']:
                 new_obj[k] = v
         new_obj['departments'] = departments
         new_obj['course'] = course

@@ -1,3 +1,4 @@
+from models.courses_departments import Department
 from models.teacher_dept import TeacherDepartments
 from api.v1.views import teacher_bp
 from api.engine import db
@@ -5,6 +6,8 @@ from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import datetime
+
+from models.teachers_and_degree import Teacher
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -62,6 +65,14 @@ def single_teacher_dept(id):
 def create_teacher_association():
     """create a teacher degree association instance"""
     data = dict(request.form)
+
+    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    if not teacher:
+        return jsonify(ERROR='Teacher does not exists'), 404
+    dept = db.get_by_id(Department, data['dept_id'])
+    if not dept:
+        return jsonify(ERROR='Department does not exists'), 404
+
     if data.get('date_assigned'):
         data['date_assigned'] = datetime.strptime(
             data['date_assigned'], BaseModel.DATE_FORMAT)

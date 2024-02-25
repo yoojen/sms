@@ -14,7 +14,7 @@ class Material(BaseModel, Base):
         "teachers.id", ondelete='SET NULL'), nullable=False)
     year_of_study = Column(Integer, nullable=False)
     description = Column(String(256))
-    file_path = Column(String(128), nullable=False)
+    link = Column(String(128), nullable=False)
 
     department_association = relationship(
         "MaterialDepartments", back_populates="material", cascade='all, delete-orphan')

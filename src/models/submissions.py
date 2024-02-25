@@ -13,10 +13,10 @@ class Submission(BaseModel, Base):
         "departments.dept_code", ondelete='CASCADE'), nullable=False)
     student_id = Column(Integer, ForeignKey(
         "students.regno", ondelete='CASCADE'), nullable=False)
-    assign_id = Column(String(50), ForeignKey(
+    assign_id = Column(Integer, ForeignKey(
         "assignments.id", ondelete='CASCADE'), nullable=False)
     year_of_study = Column(Integer, nullable=False)
-    file_path = Column(String(128), nullable=False)
+    link = Column(String(128), nullable=False)
 
     student = relationship(
         "Student", back_populates="submissions")

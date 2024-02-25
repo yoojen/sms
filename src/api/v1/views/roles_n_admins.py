@@ -214,6 +214,13 @@ def delete_admin(id):
 def create_adminrole():
     """create association between admin and roles"""
     data = dict(request.form)
+    admin = db.get_by_id(Admin, data['created_by'])
+    if not admin:
+        return jsonify(ERROR='Admin not exists'), 404
+    role = db.get_by_id(Role, data['role_id'])
+    if not role:
+        return jsonify(ERROR='Role not found')
+
     admin_roles = db.get_all_object(RoleAdmin)
     for admin_role in admin_roles:
         if int(data.get('admin_id')) == int(admin_role.admin_id) \

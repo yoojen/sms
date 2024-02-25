@@ -1,11 +1,13 @@
 from models.teacher_course import TeacherCourse
-from models.courses_departments import DepartmentCourse
+from models.courses_departments import Course, Department, DepartmentCourse
 from api.v1.views import course_blueprint
 from api.engine import db
 from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import datetime
+
+from models.teachers_and_degree import Teacher
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -61,8 +63,17 @@ def single_teacher_course(id):
 
 @course_blueprint.route('/teacher_course', methods=['POST'], strict_slashes=False)
 def create_teacher_association():
-    """create a teacher degree association instance"""
+    """create a teacher course association instance"""
     data = dict(request.form)
+
+    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    if not teacher:
+        return jsonify(ERROR='Teacher does not exists'), 404
+
+    course = db.get_by_id(Course, data['course_code'])
+    if not course:
+        return jsonify(ERROR='Course does not exists'), 404
+
     if data.get('date_assigned'):
         data['date_assigned'] = datetime.strptime(
             data['date_assigned'], BaseModel.DATE_FORMAT)
@@ -160,6 +171,13 @@ def single_dept_course(id):
 def create_crs_dept_association():
     """create a department-course association instance"""
     data = dict(request.form)
+    dept = db.get_by_id(Department, data['dept_id'])
+    if not dept:
+        return jsonify(ERROR='Department does not exists'), 404
+    course = db.get_by_id(Course, data['course_id'])
+    if not course:
+        return jsonify(ERROR='Course does not exists'), 404
+
     if data.get('date_assigned'):
         data['date_assigned'] = datetime.strptime(
             data['date_assigned'], BaseModel.DATE_FORMAT)

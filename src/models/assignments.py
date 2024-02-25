@@ -17,7 +17,7 @@ class Assignment(BaseModel, Base):
     year_of_study = Column(Integer, nullable=False)
     due_date = Column(DateTime)
     description = Column(String(1000))
-    file_path = Column(String(128), nullable=False)
+    link = Column(String(128), nullable=False)
 
     # One-To-Many relationship
     teachers = relationship(

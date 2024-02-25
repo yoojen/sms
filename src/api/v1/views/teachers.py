@@ -92,7 +92,6 @@ def single_teacher(id):
 def create_teacher():
     """function that handles creation endpoint for Teacher instance"""
     data = dict(request.form)
-    print(data)
     if data.get('dob'):
         data['dob'] = datetime.strptime(data.get('dob'), BaseModel.DATE_FORMAT)
     if data.get('staff_member'):

@@ -105,7 +105,7 @@ def create_course():
     from models.roles_and_admins import Admin
     admin = db.get_by_id(Admin, data['created_by'])
     if not admin:
-        return jsonify(ERRO='Admin does not exists')
+        return jsonify(ERROR='Admin not exists')
     data['start_date'] = datetime.strptime(
         data['start_date'], BaseModel.DATE_FORMAT)
     data['end_date'] = datetime.strptime(

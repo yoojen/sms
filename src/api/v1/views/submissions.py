@@ -1,3 +1,6 @@
+from models.assignments import Assignment
+from models.courses_departments import Course, Department
+from models.students import Student
 from models.submissions import Submission
 from api.v1.views import submission_bp
 from api.engine import db
@@ -35,7 +38,7 @@ def submissions():
             all_submissions.append(new_obj)
             new_obj = {}
         return jsonify({"submissions": all_submissions}), 200
-    return jsonify(message="Nothing found"), 404
+    return jsonify(message="Nothing found")
 
 
 @submission_bp.route('/submissions/<int:id>', methods=['GET'], strict_slashes=False)
@@ -67,14 +70,26 @@ def single_submission(id):
                      strict_slashes=False)
 def create_submission():
     """function that handles creation endpoint for Submission instance"""
-    # THIS WILL HANDLE FILE UPLOAD
     data = dict(request.form)
+    assgn = db.get_by_id(Assignment, int(data['assign_id']))
+    student = db.get_by_id(Student, int(data['student_id']))
+    dept = db.get_by_id(Department, data['dept_id'])
+    course = db.get_by_id(Course, data['course_code'])
+
+    if not assgn:
+        return jsonify(ERROR='Assignment not exists')
+    if not student:
+        return jsonify(ERROR='Student not exists')
+    if not dept:
+        return jsonify(ERROR='Department not exists')
+    if not course:
+        return jsonify(ERROR='Course not exists')
     try:
         # check if it exists
-        find_subm = db.get_by_id(Submission, data.get('id'))
-        # I HAVE TO BUILD SOMETHING THAT I CAN CHECK ACCORDING
-        # TO ASSIGNMENT ID AND STUDENT ID SO THAT I CAN KNOW
-        # STUDENT ALREADY SUBMITTED
+        find_subm = db.search(Submission, course_code=data['course_code'],
+                              dept_id=data['dept_id'], student_id=int(
+                                  data['student_id']),
+                              assign_id=int(data['assign_id']))
         if find_subm:
             return jsonify(error="Submitted already"), 409
         created = db.create_object(Submission(**data))

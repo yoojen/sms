@@ -30,7 +30,7 @@ def assignments():
 
         for k, v in assignm.to_json().items():
             if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
-                     'year_of_study', 'due_date', 'description', 'file_path',
+                     'year_of_study', 'due_date', 'description', 'link',
                      'created_at', 'updated_at']:
                 new_obj[k] = v
         new_obj['teacher'] = teacher
@@ -54,7 +54,7 @@ def one_assignment(id):
 
         for k, v in assignm.to_json().items():
             if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
-                     'year_of_study', 'due_date', 'description', 'file_path',
+                     'year_of_study', 'due_date', 'description', 'link',
                      'created_at', 'updated_at']:
                 new_obj[k] = v
         new_obj['teacher'] = teacher

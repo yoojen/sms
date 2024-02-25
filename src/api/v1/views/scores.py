@@ -1,3 +1,4 @@
+from models.courses_departments import Course, Department
 from models.scores import Score
 from api.v1.views import score_blueprint
 from api.engine import db
@@ -5,6 +6,9 @@ from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import datetime
+from models.students import Student
+
+from models.teachers_and_degree import Teacher
 
 
 BASE_URL = 'http://localhost:5000/api/v1'
@@ -72,6 +76,19 @@ def single_score(id):
 def create_score():
     """function that handles creation endpoint for Score instance"""
     data = dict(request.form)
+    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    student = db.get_by_id(Student, data['student_id'])
+    dept = db.get_by_id(Department, data['dept_id'])
+    course = db.get_by_id(Course, data['course_code'])
+
+    if not teacher:
+        return jsonify(ERROR='Teacher not exists')
+    if not student:
+        return jsonify(ERROR='Student not exists')
+    if not dept:
+        return jsonify(ERROR='Department not exists')
+    if not course:
+        return jsonify(ERROR='Course not exists')
     try:
         # check if it exists
         find_Score = db.get_by_id(Score, data.get('id'))

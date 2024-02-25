@@ -1,3 +1,4 @@
+from models.courses_departments import Department
 from models.students import Student
 from api.v1.views import students_blueprint
 from api.engine import db
@@ -66,8 +67,12 @@ def single_students(regno):
 def create_student():
     """function that handles creation endpoint for Student instance"""
     data = dict(request.form)
+    dept = db.get_by_id(Department, data['dept_id'])
+    if not dept:
+        return jsonify(ERROR='Department not exists')
     if data.get('dob'):
         data['dob'] = datetime.strptime(data.get('dob'), BaseModel.DATE_FORMAT)
+
     password_bytes = data.get('password').encode()
     hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
     data['password'] = hashed_password
