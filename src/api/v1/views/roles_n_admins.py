@@ -113,7 +113,7 @@ def admins():
             f'{BASE_URL}/courses/{course.course_code}'
             for course in admin.courses]
         for k, v in admin.to_json().items():
-            if k in ['id', 'first_name', 'last_name', 'email', 'password',
+            if k in ['id', 'first_name', 'last_name', 'email', 'password', 'citizenship', 'tel',
                      'dob', 'last_login', 'created_at', 'updated_at']:
                 new_obj[k] = v
         new_obj['roles'] = roles
@@ -136,7 +136,7 @@ def one_admin(id):
             f'{BASE_URL}/courses/{course.course_code}'
             for course in admin.courses]
         for k, v in admin.to_json().items():
-            if k in ['id', 'first_name', 'last_name', 'email', 'password',
+            if k in ['id', 'first_name', 'last_name', 'email', 'password', 'citizenship', 'tel',
                      'dob', 'last_login', 'created_at', 'updated_at']:
                 new_obj[k] = v
         new_obj['roles'] = roles

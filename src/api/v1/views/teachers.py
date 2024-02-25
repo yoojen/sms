@@ -34,7 +34,7 @@ def teachers():
                 f'{BASE_URL}/materials/{material.id }' for material in tchr.materials]
 
             for k, v in tchr.to_json().items():
-                if k in ['id', 'first_name', 'last_name',  'email', 'password',
+                if k in ['id', 'first_name', 'last_name',  'email', 'password', 'citizenship', 'tel',
                          'dob', 'staff_member', 'last_login', 'created_at', 'updated_at']:
                     new_obj[k] = v
 
@@ -72,7 +72,7 @@ def single_teacher(id):
             f'{BASE_URL}/materials/{material.id }' for material in teacher.materials]
 
         for k, v in teacher.to_json().items():
-            if k in ['id', 'first_name', 'last_name',  'email', 'password',
+            if k in ['id', 'first_name', 'last_name',  'email', 'password', 'citizenship', 'tel',
                      'dob', 'staff_member', 'last_login', 'created_at', 'updated_at']:
                 new_obj[k] = v
 
