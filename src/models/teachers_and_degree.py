@@ -16,9 +16,11 @@ class Teacher(BaseModel, Base):
     id = Column(Integer, primary_key=True, nullable=False)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50))
+    tel = Column(String(20), nullable=False)
     email = Column(String(50), nullable=False, unique=True)
     password = Column(String(18), nullable=False)
     dob = Column(DateTime, nullable=False)
+    citizenship = Column(String(20), nullable=False)
     staff_member = Column(Boolean, default=False)
     last_login = Column(DateTime)
 

@@ -39,6 +39,9 @@ class Admin(BaseModel, Base):
     email = Column(String(50), nullable=False, unique=True)
     password = Column(String(18), nullable=False)
     dob = Column(DateTime, nullable=False)
+    tel = Column(String(20), nullable=False)
+    citizenship = Column(String(20), nullable=False)
+
     last_login = Column(DateTime)
 
     roles_association = relationship(
