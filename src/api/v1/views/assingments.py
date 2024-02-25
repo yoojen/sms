@@ -82,13 +82,13 @@ def create_assignments():
     from models.courses_departments import Course
     teacher = db.get_by_id(Teacher, data['teacher_id'])
     if not teacher:
-        return jsonify(ERROR='Teacher does not exists')
+        return jsonify(ERROR='Teacher does not exists'), 404
     dept = db.get_by_id(Department, data['dept_id'])
     if not dept:
-        return jsonify(ERROR='Department does not exists')
+        return jsonify(ERROR='Department does not exists'), 404
     course = db.get_by_id(Course, data['course_id'])
     if not course:
-        return jsonify(ERROR='Course does not exists')
+        return jsonify(ERROR='Course does not exists'), 404
     try:
         # check if it exists
         find_dept = db.get_by_id(Assignment, data.get('id'))

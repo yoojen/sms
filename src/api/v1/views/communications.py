@@ -62,6 +62,15 @@ def single_communication(id):
 def create_communication():
     """function that handles creation endpoint for Communication instance"""
     data = dict(request.form)
+    # Check if teacher, department or course really exist
+    from models.teachers_and_degree import Teacher
+    from models.courses_departments import Department
+    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    if not teacher:
+        return jsonify(ERROR='Teacher does not exists'), 404
+    dept = db.get_by_id(Department, data['dept_id'])
+    if not dept:
+        return jsonify(ERROR='Department does not exists'), 404
     if data.get('year_of_study'):
         data['year_of_study'] = int(data.get('year_of_study'))
     try:
