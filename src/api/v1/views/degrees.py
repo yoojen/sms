@@ -1,4 +1,5 @@
-from models.teachers_and_degree import Degree, TeacherDegree
+from models.teachers_and_degree import (Degree,
+                                        TeacherDegree, Teacher)
 from api.v1.views import degree_bp
 from api.engine import db
 from flask import jsonify, request
@@ -29,7 +30,7 @@ def get_degrees():
             all_degrees.append(new_obj)
             new_obj = {}
         return jsonify({"degrees": all_degrees}), 200
-    return jsonify(message="Nothing found"), 404
+    return jsonify(message="Nothing found"), 200
 
 
 @degree_bp.route('/degrees/<int:id>', methods=['GET'],
@@ -48,7 +49,7 @@ def single_degree(id):
 
         new_obj['teachers'] = teachers
         return jsonify({"degrees": new_obj}), 200
-    return jsonify(message="Nothing found"), 404
+    return jsonify(message="Nothing found"), 200
 
 
 @degree_bp.route('/degrees', methods=['POST'],
@@ -136,7 +137,7 @@ def single_teacher_degree(id):
                 new_obj[k] = v
         new_obj['teachers'] = teachers
         new_obj['degrees'] = degrees
-        return jsonify({"td association": new_obj}), 200
+        return jsonify({"td association": new_obj})
     else:
         return jsonify(ERROR="Nothing found")
 
@@ -146,7 +147,13 @@ def create_teacherdegree_association():
     """create a teacher degree association instance"""
     data = dict(request.form)
     data['teacher_id'] = int(data.get('teacher_id'))
-
+    # check if degree or teacher exists in db
+    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    if not teacher:
+        return jsonify(ERROR='Teacher does not exists'), 404
+    degree = db.get_by_id(Degree, data['degree_id'])
+    if not degree:
+        return jsonify(ERROR='Degree does not exists'), 404
     try:
         # check if it exists
         assoc = db.search(TeacherDegree, **data)
