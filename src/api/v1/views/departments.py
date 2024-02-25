@@ -1,11 +1,13 @@
 from models.courses_departments import Department
-from models.materials_and_matdept import MaterialDepartments
+from models.materials_and_matdept import Material, MaterialDepartments
 from models.base_model import BaseModel
 from api.v1.views import dept_blueprint
 from api.engine import db
 from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound
 from datetime import datetime
+
+from models.teachers_and_degree import Teacher
 
 
 BASE_URL = 'http://localhost:5000/api/v1'
@@ -21,25 +23,25 @@ def departments():
     for dept in depts:
         courses = [
             f'{BASE_URL}/courses/{course.course_code}'
-            for course in dept.courses]
+            for course in dept.courses if dept.courses]
         materials = [
             f'{BASE_URL}/materials/{material.id}'
-            for material in dept.materials]
+            for material in dept.materials if dept.materials]
         teachers = [
             f'{BASE_URL}/teachers/{teacher.id}'
-            for teacher in dept.teachers]
+            for teacher in dept.teachers if dept.teachers]
         students = [
             f'{BASE_URL}/students/{student.regno}'
-            for student in dept.students]
+            for student in dept.students if dept.students]
         communications = [
             f'{BASE_URL}/communications/{comm.id}'
-            for comm in dept.communications]
+            for comm in dept.communications if dept.communications]
         submissions = [
             f'{BASE_URL}/submissions/{subm.id}'
-            for subm in dept.submissions]
+            for subm in dept.submissions if dept.submissions]
         scores = [
             f'{BASE_URL}/scores/{score.id}'
-            for score in dept.scores]
+            for score in dept.scores if dept.scores]
         # assignments = [f'{BASE_URL}/assignments/{assign.id}'
         # for assign in departments.assignments] yet to be implemented
 
@@ -67,25 +69,25 @@ def one_department(code):
     if dept:
         courses = [
             f'{BASE_URL}/courses/{course.course_code}'
-            for course in dept.courses]
+            for course in dept.courses if dept.courses]
         materials = [
             f'{BASE_URL}/materials/{material.id}'
-            for material in dept.materials]
+            for material in dept.materials if dept.materials]
         teachers = [
             f'{BASE_URL}/teachers/{teacher.id}'
-            for teacher in dept.teachers]
+            for teacher in dept.teachers if dept.teachers]
         students = [
             f'{BASE_URL}/students/{student.regno}'
-            for student in dept.students]
+            for student in dept.students if dept.students]
         communications = [
             f'{BASE_URL}/communications/{comm.id}'
-            for comm in dept.communications]
+            for comm in dept.communications if dept.communications]
         submissions = [
             f'{BASE_URL}/submissions/{subm.id}'
-            for subm in dept.submissions]
+            for subm in dept.submissions if dept.submissions]
         scores = [
             f'{BASE_URL}/scores/{score.id}'
-            for score in dept.scores]
+            for score in dept.scores if dept.scores]
         # assignments = [f'{BASE_URL}/assignments/{assign.id}'
         # for assign in departments.assignments] yet to be implemented
 
@@ -115,6 +117,10 @@ def one_department(code):
 def create_department():
     """function that handles creation endpoint for Department instance"""
     data = dict(request.form)
+    # check for hod
+    hod = db.get_by_id(Teacher, data['hod'])
+    if not hod:
+        return jsonify(ERROR='Teacher not found'), 404
     try:
         # check if it exists
         find_dept = db.get_by_id(Department, data['dept_code'])
@@ -181,7 +187,7 @@ def dept_material():
             new_obj = {}
         return jsonify({"department-materials associations": all_associations}), 200
     else:
-        return jsonify(ERROR='Nothing found'), 404
+        return jsonify(ERROR='Nothing found')
 
 
 @dept_blueprint.route('/dept_material/<int:id>', methods=['GET'],
@@ -211,6 +217,13 @@ def single_dept_material(id):
 def create_dept_material_ass():
     """create a department-material association instance"""
     data = dict(request.form)
+    # check material or department existence
+    mat = db.get_by_id(Material, data['material_id'])
+    if not mat:
+        return jsonify(ERROR='Material not found'), 404
+    dept = db.get_by_id(Department, data['department_id'])
+    if not dept:
+        return jsonify(ERROR='Department not found'), 404
     if data.get('date_uploaded'):
         data['date_uploaded'] = datetime.strptime(
             data['date_uploaded'], BaseModel.DATE_FORMAT)

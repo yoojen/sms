@@ -1,8 +1,11 @@
+from models.courses_departments import Course
 from models.materials_and_matdept import Material
 from api.v1.views import material_blueprint
 from api.engine import db
 from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound
+
+from models.teachers_and_degree import Teacher
 
 
 BASE_URL = 'http://localhost:5000/api/v1'
@@ -73,6 +76,13 @@ def single_materials(id):
 def create_material():
     """function that handles creation endpoint for Material instance"""
     data = dict(request.form)
+    # check teacher or course availability
+    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    if not teacher:
+        return jsonify(ERROR='Teacher does not exists'), 404
+    course = db.get_by_id(Course, data['course_code'])
+    if not course:
+        return jsonify(ERROR='Course does not exists'), 404
     try:
         # check if it exists
         find_dept = db.get_by_id(Material, data.get('id'))
