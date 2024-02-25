@@ -2,7 +2,7 @@ from models.assignments import Assignment
 from api.v1.views import assignm_blueprint
 from api.engine import db
 from flask import jsonify, request
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import NoResultFound, IntegrityError
 from models.base_model import BaseModel
 from datetime import datetime
 
@@ -75,6 +75,20 @@ def create_assignments():
     data = dict(request.form)
     data['due_date'] = datetime.strptime(
         data.get('due_date'), BaseModel.DATE_FORMAT)
+
+    # Check if teacher, department or course really exist
+    from models.teachers_and_degree import Teacher
+    from models.courses_departments import Department
+    from models.courses_departments import Course
+    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    if not teacher:
+        return jsonify(ERROR='Teacher does not exists')
+    dept = db.get_by_id(Department, data['dept_id'])
+    if not dept:
+        return jsonify(ERROR='Department does not exists')
+    course = db.get_by_id(Course, data['course_id'])
+    if not course:
+        return jsonify(ERROR='Course does not exists')
     try:
         # check if it exists
         find_dept = db.get_by_id(Assignment, data.get('id'))

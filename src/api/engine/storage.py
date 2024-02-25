@@ -80,7 +80,7 @@ class DB:
             objs = self._session.query(cls).all()
         return objs
 
-    def get_by_id(self, cls,  id: str) -> Dict:
+    def get_by_id(self, cls,  id: str):
         """Query object from the database based on id provided as param"""
         obj = {}
 
