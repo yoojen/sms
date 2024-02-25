@@ -19,16 +19,16 @@ def courses():
     for course in courses:
         departments = [
             f'{BASE_URL}/departments/{depts.dept_code}'
-            for depts in course.departments]
+            for depts in course.departments if course.departments]
         materials = [
             f'{BASE_URL}/materials/{material.id}'
-            for material in course.materials]
+            for material in course.materials if course.materials]
         teachers = [
             f'{BASE_URL}/teachers/{teacher.id}'
-            for teacher in course.teachers]
+            for teacher in course.teachers if course.teachers]
         # assignments = [f'{BASE_URL}/assignments/{assign.id}'
         # for assign in course.assignments] yet to be implemented
-        creator = f'{BASE_URL}/creators/{course.creator.id}'
+        creator = f'{BASE_URL}/creators/{course.creator.id}' if course.creator else None
 
         for k, v in course.to_json().items():
             if k in ['course_code', 'year_of_study', 'end_date', 'description',
@@ -52,13 +52,13 @@ def courses_by_code(code):
     if course:
         departments = [
             f'{BASE_URL}/departments/{depts.dept_code}'
-            for depts in course.departments]
+            for depts in course.departments if course.departments]
         materials = [
             f'{BASE_URL}/materials/{material.id}'
-            for material in course.materials]
+            for material in course.materials if course.materials]
         teachers = [
             f'{BASE_URL}/teachers/{teacher.id}'
-            for teacher in course.teachers]
+            for teacher in course.teachers if course.teachers]
         # assignments = [f'{BASE_URL}/assignments/{assign.id}'
         # for assign in course.assignments] yet to be implemented
         creator = f'{BASE_URL}/creators/{course.creator.id}'
@@ -100,6 +100,12 @@ def courses_by_code(code):
 def create_course():
     """function that handles creation endpoint for Course instance"""
     data = dict(request.form)
+
+    # check creator existence
+    from models.roles_and_admins import Admin
+    admin = db.get_by_id(Admin, data['created_by'])
+    if not admin:
+        return jsonify(ERRO='Admin does not exists')
     data['start_date'] = datetime.strptime(
         data['start_date'], BaseModel.DATE_FORMAT)
     data['end_date'] = datetime.strptime(
