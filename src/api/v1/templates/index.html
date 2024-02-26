@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{user.__class__.__name__}}</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      .container {
+        display: flex;
+      }
+      .nav-side {
+        background-color: rgb(0, 0, 48);
+        width: 20%;
+        height: 100vh;
+        color: white;
+      }
+
+      .main-section {
+        width: 75%;
+        /* height: 100vh; */
+      }
+      .navigations ul {
+        display: flex;
+        flex-direction: column;
+      }
+      li {
+        padding: 10px;
+      }
+      li a {
+        color: white;
+        font-size: 18px;
+        font-family: 'Courier New', Courier, monospace;
+        text-decoration: none;
+      }
+
+      li:hover {
+        background-color: green;
+      }
+      button {
+        transition: 0.3s ease-in-out;
+      }
+      button:hover {
+        background-color: green;
+        outline: none;
+        border: none;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="nav-side">
+        <section class="person">
+          <div class="logo">
+            <img
+              src="../static/images/LOGO.png"
+              alt=""
+              width="230px"
+              height="150px"
+            />
+          </div>
+          {% if user %}
+          <div class="profile-picture">{{user.email}}</div>
+          {%endif%}
+        </section>
+
+        <section class="navigations">
+          <ul>
+            <li><a href="/api/v1/courses">Courses</a></li>
+            <li><a href="">Assignments</a></li>
+            <li><a href="">Communications</a></li>
+            <li><a href="">Materials</a></li>
+          </ul>
+        </section>
+        <section
+          class="logout"
+          style="position: absolute; bottom: 10px; width: 20%"
+        >
+          <button
+            style="
+              width: 100%;
+              cursor: pointer;
+              padding: 5px 0;
+              font-size: 15px;
+            "
+            onclick="logout()"
+          >
+            Log out
+          </button>
+        </section>
+      </div>
+      <div class="main-section">MAIN</div>
+    </div>
+    <script>
+      async function logout() {
+        try {
+          const result = await fetch('http://localhost:5000/logout');
+
+          const data = await result.json();
+          console.log(data);
+          if (data.message) {
+            location.assign('/login');
+          }
+        } catch (err) {}
+      }
+    </script>
+  </body>
+</html>

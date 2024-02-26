@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../static/styles/styles.css" />
+    <title>signup</title>
+  </head>
+  <body>
+    <form>
+      <h1>Sign up</h1>
+      <label for="regno">Registration number</label>
+      <input type="number" name="regno" id="" required />
+      <label for="tel">Telephone number</label>
+      <input type="number" name="tel" id="" required />
+
+      <label for="email">Email</label>
+      <input type="email" name="email" id="" required />
+
+      <label for="password">Password</label>
+      <input type="password" name="password" id="" />
+
+      <label for="first_name">first_name</label>
+      <input type="first_name" name="first_name" id="" required />
+
+      <label for="first_name">last_name</label>
+      <input type="last_name" name="last_name" id="" required />
+      <label for="dob">dob</label>
+      <input type="date" name="dob" id="" required />
+
+      <label for="dept_id">Department</label>
+      <input type="text" name="dept_id" id="" required />
+
+      <label for="year_of_study">year_of_study</label>
+      <input type="text" name="year_of_study" id="" />
+
+      <label for="citizenship">citizenship</label>
+      <input type="text" name="citizenship" id="" />
+      <label for="sponsorship">sponsorship</label>
+      <input type="text" name="sponsorship" id="" />
+      <button type="submit">Sign up</button>
+    </form>
+
+    <script>
+      const form = document.querySelector('form');
+      const emailError = document.querySelector('.email.error');
+      const passwordError = document.querySelector('.password.error');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        //get values
+        const regno = form.regno.value;
+        const email = form.email.value;
+        const password = form.password.value;
+        const first_name = form.first_name.value;
+        const last_name = form.last_name.value;
+        const dob = form.dob.value;
+        const dept_id = form.dept_id.value;
+        const year_of_study = form.year_of_study.value;
+        const citizenship = form.citizenship.value;
+        const sponsorship = form.sponsorship.value;
+        const tel = form.tel.value;
+
+        try {
+          const result = await fetch('http://localhost:5000/api/v1/students', {
+            method: 'POST',
+            body: JSON.stringify({
+              email,
+              password,
+              regno,
+              first_name,
+              last_name,
+              dob,
+              dept_id,
+              year_of_study,
+              citizenship,
+              sponsorship,
+              tel,
+            }),
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          const data = await result.json();
+          console.log(data);
+          if (data.errors) {
+            emailError.textContent = data.errors.email;
+            passwordError.textContent = data.errors.password;
+          }
+          if (data.email) {
+            location.assign('/login');
+          }
+        } catch (err) {}
+      });
+    </script>
+  </body>
+</html>
