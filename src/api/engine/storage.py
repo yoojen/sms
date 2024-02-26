@@ -58,7 +58,7 @@ class DB:
         # Base.metadata.drop_all(bind=self._engine)
         Base.metadata.create_all(bind=self._engine)
         session_factory = sessionmaker(
-            bind=self._engine, expire_on_commit=True)
+            bind=self._engine, expire_on_commit=False)
         Session = scoped_session(session_factory)
         self._session = Session()
 
@@ -74,10 +74,9 @@ class DB:
     def get_all_object(self, cls) -> Dict:
         """Query object from the database based on cls"""
         objs = {}
-        if cls in self.classes.values():
-            self._session.close()
-            self._session.begin()
-            objs = self._session.query(cls).all()
+        # self._session.close()
+        # self._session.begin()
+        objs = self._session.query(cls).all()
         return objs
 
     def get_by_id(self, cls,  id: str):
@@ -85,8 +84,8 @@ class DB:
         obj = {}
 
         if cls in self.classes.values():
-            self._session.close()
-            self._session.begin()
+            # self._session.close()
+            # self._session.begin()
             if (cls == self.classes['Course']):
                 obj = self._session.query(cls).filter(
                     cls.course_code == id).first()
@@ -144,3 +143,9 @@ class DB:
             return objects
         else:
             return []
+
+    def close(self):
+        '''
+            Remove private session attribute
+        '''
+        self._session.close()
