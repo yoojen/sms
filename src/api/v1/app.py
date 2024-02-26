@@ -1,4 +1,6 @@
 from flask import Flask, jsonify
+from flask_login import LoginManager
+from api.engine import db
 from api.v1.views import (course_blueprint,
                           dept_blueprint,
                           assignm_blueprint,
@@ -9,12 +11,19 @@ from api.v1.views import (course_blueprint,
                           students_blueprint,
                           submission_bp,
                           teacher_bp,
-                          degree_bp)
-
+                          degree_bp,
+                          auth_blueprint)
 
 HOST = '127.0.0.1'
 PORT = 5000
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'not secret'
+login_manager = LoginManager()
+login_manager.login_view = 'auth_blueprint.login'
+login_manager.init_app(app)
+
+
+app.register_blueprint(auth_blueprint)
 app.register_blueprint(course_blueprint)
 app.register_blueprint(dept_blueprint)
 app.register_blueprint(assignm_blueprint)
@@ -28,10 +37,28 @@ app.register_blueprint(teacher_bp)
 app.register_blueprint(degree_bp)
 
 
-@app.route('/')
-def home_handler():
-    """home message"""
-    return jsonify({"message": "Home route"}), 200
+@login_manager.user_loader
+def load_user(user_id):
+    from models.students import Student
+    from models.teachers_and_degree import Teacher
+    from models.roles_and_admins import Admin
+    student = db.get_by_id(Student, user_id)
+    teacher = db.get_by_id(Teacher, user_id)
+    admin = db.search(Admin, email=user_id)
+    if student:
+        return student
+    if teacher:
+        return teacher
+    if admin:
+        return admin[0]
+
+
+@app.teardown_appcontext
+def teardown_app(code):
+    '''
+        Handles teardown
+    '''
+    db.close()
 
 
 @app.errorhandler(404)
@@ -53,4 +80,4 @@ def unauthorized_handler(error):
 
 
 if __name__ == "__main__":
-    app.run(HOST, PORT, debug=True)
+    app.run(HOST, PORT, debug=True, threaded=True)
