@@ -24,3 +24,5 @@ submission_bp = Blueprint('submission_bp', __name__, url_prefix='/api/v1')
 teacher_bp = Blueprint('teacher_bp', __name__, url_prefix='/api/v1')
 
 degree_bp = Blueprint("degree_bp", __name__, url_prefix='/api/v1')
+
+auth_blueprint = Blueprint("auth_blueprint", __name__, url_prefix='/')
