@@ -5,7 +5,7 @@ import bcrypt
 from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound, PendingRollbackError
 from models.base_model import BaseModel
-from datetime import datetime
+from datetime import date
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -92,16 +92,17 @@ def single_teacher(id):
 def create_teacher():
     """function that handles creation endpoint for Teacher instance"""
     data = dict(request.form)
-    if data.get('dob'):
-        data['dob'] = datetime.strptime(data.get('dob'), BaseModel.DATE_FORMAT)
-    if data.get('staff_member'):
-        data['staff_member'] = True
-    else:
-        data['staff_member'] = False
-    password_bytes = data.get('password').encode()
-    hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
-    data['password'] = hashed_password
+
     try:
+        dob = data['dob'].split('-')
+        data['dob'] = date(int(dob[0]), int(dob[1]), int(dob[2]))
+        if data.get('staff_member'):
+            data['staff_member'] = True
+        else:
+            data['staff_member'] = False
+        password_bytes = data.get('password').encode()
+        hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+        data['password'] = hashed_password
         # check if it exists
         created = db.create_object(Teacher(**data))
     except Exception as e:

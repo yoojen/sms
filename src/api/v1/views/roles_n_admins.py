@@ -5,7 +5,7 @@ import bcrypt
 from flask import jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
-from datetime import datetime
+from datetime import date, datetime
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -113,7 +113,7 @@ def admins():
             f'{BASE_URL}/courses/{course.course_code}'
             for course in admin.courses]
         for k, v in admin.to_json().items():
-            if k in ['id', 'first_name', 'last_name', 'email', 'password', 'citizenship', 'tel',
+            if k in ['id', 'first_name', 'last_name', 'email', 'citizenship', 'tel',
                      'dob', 'last_login', 'created_at', 'updated_at']:
                 new_obj[k] = v
         new_obj['roles'] = roles
@@ -136,7 +136,7 @@ def one_admin(id):
             f'{BASE_URL}/courses/{course.course_code}'
             for course in admin.courses]
         for k, v in admin.to_json().items():
-            if k in ['id', 'first_name', 'last_name', 'email', 'password', 'citizenship', 'tel',
+            if k in ['id', 'first_name', 'last_name', 'email', 'citizenship', 'tel',
                      'dob', 'last_login', 'created_at', 'updated_at']:
                 new_obj[k] = v
         new_obj['roles'] = roles
@@ -162,12 +162,13 @@ def one_admin(id):
 def create_admin():
     """function that handles creation endpoint for Admin instance"""
     data = dict(request.form)
-    data['dob'] = datetime.strptime(data.get('dob'), BaseModel.DATE_FORMAT)
+    dob = data['dob'].split('-')
     password_bytes = data.get('password').encode()
     hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
     data['password'] = hashed_password
     try:
         # check if it exists
+        data['dob'] = date(int(dob[0]), int(dob[1]), int(dob[2]))
         admin = db.get_by_id(Admin, data.get('id'))
         if admin:
             return jsonify(error="Admin already exist"), 409

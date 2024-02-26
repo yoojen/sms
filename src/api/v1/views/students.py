@@ -2,11 +2,11 @@ from models.courses_departments import Department
 from models.students import Student
 from api.v1.views import students_blueprint
 from api.engine import db
-from flask import jsonify, request
+from flask import jsonify, redirect, request, url_for
 import bcrypt
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
-from datetime import datetime
+from datetime import date
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -24,7 +24,7 @@ def students():
             submissions = [subm.to_json() for subm in student.submissions]
 
             for k, v in student.to_json().items():
-                if k in ['regno', 'first_name', 'last_name',  'email', 'password',
+                if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
                          'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
                          'last_login', 'created_at', 'updated_at']:
                     new_obj[k] = v
@@ -50,7 +50,7 @@ def single_students(regno):
         submissions = [subm.to_json() for subm in student.submissions]
 
         for k, v in student.to_json().items():
-            if k in ['regno', 'first_name', 'last_name',  'email', 'password',
+            if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
                      'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
                      'last_login', 'created_at', 'updated_at']:
                 new_obj[k] = v
@@ -66,23 +66,23 @@ def single_students(regno):
                           strict_slashes=False)
 def create_student():
     """function that handles creation endpoint for Student instance"""
-    data = dict(request.form)
+    data = dict(request.get_json())
     dept = db.get_by_id(Department, data['dept_id'])
     if not dept:
         return jsonify(ERROR='Department not exists')
-    if data.get('dob'):
-        data['dob'] = datetime.strptime(data.get('dob'), BaseModel.DATE_FORMAT)
 
     password_bytes = data.get('password').encode()
     hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
     data['password'] = hashed_password
+    dob = data['dob'].split('-')
     try:
         # check if it exists
+        data['dob'] = date(int(dob[0]), int(dob[1]), int(dob[2]))
         find_Score = db.get_by_id(Student, data.get('regno'))
         if find_Score:
             return jsonify(error="Student already exist"), 409
         created = db.create_object(Student(**data))
-    except ValueError as e:
+    except Exception as e:
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
                     "email": created.email}), 201

@@ -5,17 +5,20 @@ from flask import jsonify, request
 from datetime import datetime
 from models.base_model import BaseModel
 from sqlalchemy.exc import NoResultFound
+from flask_login import current_user, login_required
 
+from models.students import Student
 BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @course_blueprint.route('/courses', methods=['GET'], strict_slashes=False)
+@login_required
 def courses():
     """returns all courses objects from the db"""
-
     new_obj = {}
     all_courses = []
-    courses = db.get_all_object(Course)
+    courses = db.search(Course, year_of_study=current_user.year_of_study)
+    st_dept = current_user.department
     for course in courses:
         departments = [
             f'{BASE_URL}/departments/{depts.dept_code}'
@@ -28,7 +31,7 @@ def courses():
             for teacher in course.teachers if course.teachers]
         # assignments = [f'{BASE_URL}/assignments/{assign.id}'
         # for assign in course.assignments] yet to be implemented
-        creator = f'{BASE_URL}/creators/{course.creator.id}' if course.creator else None
+        creator = f'{BASE_URL}/admins/{course.creator.id}' if course.creator else None
 
         for k, v in course.to_json().items():
             if k in ['course_code', 'year_of_study', 'end_date', 'description',
@@ -39,7 +42,8 @@ def courses():
         new_obj['materials'] = materials
         new_obj['teachers'] = teachers
         new_obj['creator'] = creator
-        all_courses.append(new_obj)
+        if st_dept in course.departments:
+            all_courses.append(new_obj)
         new_obj = {}
     return jsonify({"courses": all_courses}), 200
 
@@ -61,8 +65,7 @@ def courses_by_code(code):
             for teacher in course.teachers if course.teachers]
         # assignments = [f'{BASE_URL}/assignments/{assign.id}'
         # for assign in course.assignments] yet to be implemented
-        creator = f'{BASE_URL}/creators/{course.creator.id}'
-
+        creator = f'{BASE_URL}/admins/{course.creator.id}' if course.creator else None
         for k, v in course.to_json().items():
             if k in ['course_code', 'year_of_study', 'end_date', 'description',
                      'created_at', 'course_name', 'credits', 'start_date',
