@@ -1,3 +1,4 @@
+from flask_login import UserMixin
 from sqlalchemy import (Column,
                         Integer,
                         String,
@@ -10,7 +11,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from models.base_model import BaseModel, Base
 
 
-class Teacher(BaseModel, Base):
+class Teacher(UserMixin, BaseModel, Base):
     """Model for teacher table in db storage"""
     __tablename__ = "teachers"
     id = Column(Integer, primary_key=True, nullable=False)

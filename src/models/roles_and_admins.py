@@ -2,7 +2,7 @@ from sqlalchemy import Column, String, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.associationproxy import association_proxy
 from models.base_model import BaseModel, Base
-from uuid import uuid4
+from flask_login import UserMixin
 
 
 class Role(BaseModel, Base):
@@ -30,7 +30,7 @@ class RoleAdmin(BaseModel, Base):
     role = relationship("Role", back_populates="admins_association")
 
 
-class Admin(BaseModel, Base):
+class Admin(UserMixin, BaseModel, Base):
     """Model for admins table in db storage"""
     __tablename__ = "admins"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -49,3 +49,6 @@ class Admin(BaseModel, Base):
     roles = association_proxy("roles_association", "role")
 
     courses = relationship('Course', back_populates='creator')
+
+    def get_id(self):
+        return self.email
