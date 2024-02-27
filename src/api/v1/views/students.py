@@ -1,9 +1,11 @@
+from flask_login import current_user
 from models.courses_departments import Department
 from models.students import Student
 from api.v1.views import students_blueprint
 from api.engine import db
-from flask import jsonify, redirect, request, url_for
+from flask import abort, jsonify, redirect, request, url_for
 import bcrypt
+from flask_login import login_required
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import date
@@ -12,10 +14,13 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @students_blueprint.route('/students', methods=['GET'], strict_slashes=False)
+@login_required
 def students():
     """return all students in the storage"""
     new_obj = {}
     all_students = []
+    if current_user.__tablename__ == 'students':
+        abort(404)
     students = db.get_all_object(Student)
     if students:
         for student in students:
@@ -32,32 +37,62 @@ def students():
             new_obj['submissions'] = submissions
             new_obj['scores'] = scores
             new_obj['department'] = department
-
-            all_students.append(new_obj)
+            if current_user.__tablename__ == 'admins':
+                all_students.append(new_obj)
+            if current_user.__tablename__ == 'teachers':
+                if student.department in current_user.departments:
+                    all_students.append(new_obj)
             new_obj = {}
         return jsonify({"students": all_students}), 200
-    return jsonify(message="Nothing found"), 404
+    return jsonify(message="Nothing found"), 200
 
 
 @students_blueprint.route('/students/<int:regno>', methods=['GET'], strict_slashes=False)
+@login_required
 def single_students(regno):
     """return all students in the storage"""
     new_obj = {}
     student = db.get_by_id(Student, regno)
     if student:
+        # st_reg = student.regno
         department = f'{BASE_URL}/departments/{student.department.dept_code }'
         scores = [score.to_json() for score in student.scores]
         submissions = [subm.to_json() for subm in student.submissions]
 
-        for k, v in student.to_json().items():
-            if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
-                     'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
-                     'last_login', 'created_at', 'updated_at']:
-                new_obj[k] = v
+        if current_user.__tablename__ == 'admins':
+            for k, v in student.to_json().items():
+                if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
+                         'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
+                         'last_login', 'created_at', 'updated_at']:
+                    new_obj[k] = v
 
-        new_obj['submissions'] = submissions
-        new_obj['scores'] = scores
-        new_obj['department'] = department
+            new_obj['submissions'] = submissions
+            new_obj['scores'] = scores
+            new_obj['department'] = department
+        if current_user.__tablename__ == 'teachers':
+            if current_user.__tablename__ == 'teachers':
+                if student.department in current_user.departments:
+                    for k, v in student.to_json().items():
+                        if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
+                                 'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
+                                 'last_login', 'created_at', 'updated_at']:
+                            new_obj[k] = v
+
+                    new_obj['submissions'] = submissions
+                    new_obj['scores'] = scores
+                    new_obj['department'] = department
+        if current_user.__tablename__ == 'students':
+            if current_user.regno == student.regno:
+                for k, v in student.to_json().items():
+                    if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
+                             'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
+                             'last_login', 'created_at', 'updated_at']:
+                        new_obj[k] = v
+
+                new_obj['submissions'] = submissions
+                new_obj['scores'] = scores
+                new_obj['department'] = department
+
         return jsonify({"students": new_obj}), 200
     return jsonify(message="Nothing found"), 404
 
@@ -67,14 +102,15 @@ def single_students(regno):
 def create_student():
     """function that handles creation endpoint for Student instance"""
     data = dict(request.get_json())
-    # dept = db.get_by_id(Department, data['dept_id'])
-    # if not dept:
-    #     return jsonify(ERROR='Department not exists'), 404
+    dept = db.get_by_id(Department, data['dept_id'])
+    if not dept:
+        return jsonify(ERROR='Department not exists'), 404
 
     password_bytes = data.get('password').encode()
     hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
     data['password'] = hashed_password
     dob = data['dob'].split('-')
+
     try:
         # check if it exists
         data['dob'] = date(int(dob[0]), int(dob[1]), int(dob[2]))
@@ -106,6 +142,8 @@ def update_student(regno):
 def delete_student(regno):
     """function for delete endpoint, it handles Student deletion"""
 
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     try:
         db.delete(Student, regno)
     except NoResultFound as e:
