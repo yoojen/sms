@@ -17,7 +17,6 @@ def courses():
     new_obj = {}
     all_courses = []
     courses = db.get_all_object(Course)
-    # print(current_user)
     try:
         for course in courses:
             departments = [
