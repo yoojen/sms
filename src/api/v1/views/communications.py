@@ -1,3 +1,4 @@
+from flask_login import login_required
 from models.communications import Communication
 from api.v1.views import comm_blueprint
 from api.engine import db
@@ -11,6 +12,7 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @comm_blueprint.route('/communications', methods=['GET'], strict_slashes=False)
+@login_required
 def communications():
     """returns all Communication objects from the db"""
 
@@ -33,6 +35,7 @@ def communications():
 
 
 @comm_blueprint.route('/communications/<int:id>', methods=['GET'], strict_slashes=False)
+@login_required
 def single_communication(id):
     """ endpoint that handle retrival of department by is code"""
     new_obj = {}
@@ -59,6 +62,7 @@ def single_communication(id):
 
 
 @comm_blueprint.route('/communications/', methods=['POST'], strict_slashes=False)
+@login_required
 def create_communication():
     """function that handles creation endpoint for Communication instance"""
     data = dict(request.form)
@@ -82,6 +86,7 @@ def create_communication():
 
 
 @comm_blueprint.route('/communications/<int:id>', methods=['DELETE'], strict_slashes=False)
+@login_required
 def delete_communication(id):
     """function for delete endpoint, it handles Communication deletion"""
 

@@ -11,7 +11,7 @@ class Material(BaseModel, Base):
     course_code = Column(String(10), ForeignKey(
         "courses.course_code", ondelete='CASCADE'), nullable=False)
     teacher_id = Column(String(50), ForeignKey(
-        "teachers.id", ondelete='SET NULL'), nullable=False)
+        "teachers.id", ondelete='SET NULL'))
     year_of_study = Column(Integer, nullable=False)
     description = Column(String(256))
     link = Column(String(128), nullable=False)

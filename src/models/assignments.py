@@ -8,7 +8,7 @@ class Assignment(BaseModel, Base):
     __tablename__ = "assignments"
     id = Column(Integer, autoincrement=True, primary_key=True)
     teacher_id = Column(Integer, ForeignKey(
-        "teachers.id", ondelete='CASCADE'), nullable=False)
+        "teachers.id", ondelete='SET NULL'))
     dept_id = Column(String(10), ForeignKey(
         "departments.dept_code", ondelete='CASCADE'), nullable=False)
     course_id = Column(String(10), ForeignKey(

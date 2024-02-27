@@ -17,8 +17,8 @@ def courses():
     new_obj = {}
     all_courses = []
     courses = db.get_all_object(Course)
+    # print(current_user)
     try:
-
         for course in courses:
             departments = [
                 f'{BASE_URL}/departments/{depts.dept_code}'
@@ -45,16 +45,17 @@ def courses():
             if current_user.__tablename__ == 'admins':
                 all_courses.append(new_obj)
             elif current_user.__tablename__ == 'teachers':
-                if course in current_user.courses:
+                if current_user.courses:
                     all_courses.append(new_obj)
             if current_user.__tablename__ == 'students':
-                if current_user.department in course.departments:
-                    all_courses.append(new_obj)
+                if current_user.department:
+                    if current_user.department in course.departments\
+                            and current_user.year_of_study == course.year_of_study:
+                        all_courses.append(new_obj)
             new_obj = {}
     except Exception as error:
-        flash("Login and try again")
+        flash(str(error))
         return redirect(url_for('auth_blueprint.login')), 301
-
     return jsonify({"courses": all_courses}), 200
 
 
@@ -122,20 +123,20 @@ def courses_by_code(code):
                     new_obj['creator'] = creator
                 # return new_obj
             if current_user.__tablename__ == 'students':
-                if current_user.department in course.departments and\
-                        course.year_of_study == current_user.year_of_study:
-                    for k, v in course.to_json().items():
-                        if k in ['course_code', 'year_of_study', 'end_date', 'description',
-                                 'created_at', 'course_name', 'credits', 'start_date',
-                                 'created_by', 'updated_at']:
-                            new_obj[k] = v
-                    new_obj['departments'] = departments
-                    new_obj['materials'] = materials
-                    new_obj['teachers'] = teachers
-                    new_obj['creator'] = creator
+                if current_user.department:
+                    if current_user.department in course.departments and\
+                            course.year_of_study == current_user.year_of_study:
+                        for k, v in course.to_json().items():
+                            if k in ['course_code', 'year_of_study', 'end_date', 'description',
+                                     'created_at', 'course_name', 'credits', 'start_date',
+                                     'created_by', 'updated_at']:
+                                new_obj[k] = v
+                        new_obj['departments'] = departments
+                        new_obj['materials'] = materials
+                        new_obj['teachers'] = teachers
+                        new_obj['creator'] = creator
 
     except Exception as error:
-        print(error)
         flash("Login and try again")
         return redirect(url_for('auth_blueprint.login'))
     return jsonify({"course": new_obj}), 200

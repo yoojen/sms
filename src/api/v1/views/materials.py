@@ -1,3 +1,4 @@
+from flask_login import current_user, login_required
 from models.courses_departments import Course
 from models.materials_and_matdept import Material
 from api.v1.views import material_blueprint
@@ -12,6 +13,7 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @material_blueprint.route('/materials', methods=['GET'], strict_slashes=False)
+@login_required
 def materials():
     """returns all Materials objects from the db"""
 
@@ -19,12 +21,15 @@ def materials():
     all_materials = []
     materials = db.get_all_object(Material)
     for material in materials:
+        if current_user.__tablename__ != 'students':
+            usr_mat = current_user.materials
+            ass_tchr = current_user.assignments
         departments = [
             f'{BASE_URL}/departments/{depts.dept_code}'
             for depts in material.departments]
         course = f'{BASE_URL}/courses/{ material.course.course_code}'
 
-        teacher = f'{BASE_URL}/teachers/{material.teacher.id}'
+        teacher = f'{BASE_URL}/teachers/{material.teacher.id}' if material.teacher else None
 
         for k, v in material.to_json().items():
             if k in ['id', 'course_code', 'teacher_id', 'year_of_study',
@@ -33,13 +38,23 @@ def materials():
         new_obj['departments'] = departments
         new_obj['course'] = course
         new_obj['teacher'] = teacher
-        all_materials.append(new_obj)
+
+        if current_user.__tablename__ == 'admins':
+            all_materials.append(new_obj)
+        elif current_user.__tablename__ == 'teachers':
+            if material in usr_mat:
+                all_materials.append(new_obj)
+        if current_user.__tablename__ == 'students':
+            if current_user.department in material.departments\
+                    and current_user.year_of_study == material.year_of_study:
+                all_materials.append(new_obj)
         new_obj = {}
     return jsonify({"materials": all_materials}), 200
 
 
 @material_blueprint.route('/materials/<int:id>', methods=['GET'],
                           strict_slashes=False)
+@login_required
 def single_materials(id):
     """returns single Material object from the db"""
 
@@ -53,19 +68,40 @@ def single_materials(id):
 
         teacher = f'{BASE_URL}/teachers/{material.teacher.id}'
 
-        for k, v in material.to_json().items():
-            if k in ['id', 'course_code', 'teacher_id', 'year_of_study',
-                     'description', 'link', 'created_at', 'updated_at']:
-                new_obj[k] = v
-        new_obj['departments'] = departments
-        new_obj['course'] = course
-        new_obj['teacher'] = teacher
-
+        if current_user.__tablename__ == 'admins':
+            for k, v in material.to_json().items():
+                if k in ['id', 'course_code', 'teacher_id', 'year_of_study',
+                         'description', 'link', 'created_at', 'updated_at']:
+                    new_obj[k] = v
+            new_obj['departments'] = departments
+            new_obj['course'] = course
+            new_obj['teacher'] = teacher
+        elif current_user.__tablename__ == 'teachers':
+            if material in current_user.materials:
+                for k, v in material.to_json().items():
+                    if k in ['id', 'course_code', 'teacher_id', 'year_of_study',
+                             'description', 'link', 'created_at', 'updated_at']:
+                        new_obj[k] = v
+                new_obj['departments'] = departments
+                new_obj['course'] = course
+                new_obj['teacher'] = teacher
+        if current_user.__tablename__ == 'students':
+            if current_user.department in material.departments\
+                    and current_user.year_of_study == material.year_of_study:
+                print("matched")
+                for k, v in material.to_json().items():
+                    if k in ['id', 'course_code', 'teacher_id', 'year_of_study',
+                             'description', 'link', 'created_at', 'updated_at']:
+                        new_obj[k] = v
+                new_obj['departments'] = departments
+                new_obj['course'] = course
+                new_obj['teacher'] = teacher
         # handling url args
         if request.args:
             args_dict = dict(request.args)
             data, status_code = args_handler(material, args_dict)
             return jsonify([data]), status_code
+
         return jsonify({"materials": new_obj}), 200
     else:
         return jsonify(ERROR="Not found"), 404
@@ -73,6 +109,7 @@ def single_materials(id):
 
 @material_blueprint.route('/materials/', methods=['POST'],
                           strict_slashes=False)
+@login_required
 def create_material():
     """function that handles creation endpoint for Material instance"""
     data = dict(request.form)
@@ -83,35 +120,42 @@ def create_material():
     course = db.get_by_id(Course, data['course_code'])
     if not course:
         return jsonify(ERROR='Course does not exists'), 404
-    try:
-        # check if it exists
-        find_dept = db.get_by_id(Material, data.get('id'))
-        if find_dept:
-            return jsonify(error="Material already exist"), 409
-        created = db.create_object(Material(**data))
-    except ValueError as e:
-        return jsonify({"message": "Not created", "error": str(e)}), 400
-    return jsonify({"message": "Successfully created",
-                    "location": created.file_path}), 201
+
+    if current_user.__tablename__ == 'admins' \
+            or current_user.__tablename__ == 'students':
+        try:
+            # check if it exists
+            find_dept = db.get_by_id(Material, data.get('id'))
+            if find_dept:
+                return jsonify(error="Material already exist"), 409
+            created = db.create_object(Material(**data))
+        except ValueError as e:
+            return jsonify({"message": "Not created", "error": str(e)}), 400
+        return jsonify({"message": "Successfully created",
+                        "location": created.file_path}), 201
 
 
 @material_blueprint.route('/materials/<int:id>', methods=['PUT'],
                           strict_slashes=False)
+@login_required
 def update_department(id):
     """ function that handles update endpoint for Material instance"""
-    try:
-        data = dict(request.form)
-        if data.get('year_of_study'):
-            data['year_of_study'] = int(data.get('year_of_study'))
-        updated = db.update(Material, id, **data)
-    except Exception as error:
-        return jsonify(ERROR=str(error)), 400
-    return jsonify({"message": "Successfully updated",
-                    "id": updated.id}), 201
+    if current_user.__tablename__ == 'admins' \
+            or current_user.__tablename__ == 'students':
+        try:
+            data = dict(request.form)
+            if data.get('year_of_study'):
+                data['year_of_study'] = int(data.get('year_of_study'))
+            updated = db.update(Material, id, **data)
+        except Exception as error:
+            return jsonify(ERROR=str(error)), 400
+        return jsonify({"message": "Successfully updated",
+                        "id": updated.id}), 201
 
 
 @material_blueprint.route('/materials/<int:id>', methods=['DELETE'],
                           strict_slashes=False)
+@login_required
 def delete_material(id):
     """function for delete endpoint, it handles Material deletion"""
 

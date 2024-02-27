@@ -8,7 +8,7 @@ class Score(BaseModel, Base):
     __tablename__ = "scores"
     id = Column(Integer, autoincrement=True, primary_key=True)
     teacher_id = Column(Integer, ForeignKey(
-        "teachers.id", ondelete='SET NULL'), nullable=False)
+        "teachers.id", ondelete='SET NULL'))
     student_id = Column(Integer, ForeignKey(
         "students.regno", ondelete='CASCADE'), nullable=False)
     dept_id = Column(String(10), ForeignKey(

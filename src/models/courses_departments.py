@@ -15,7 +15,7 @@ class Department(BaseModel, Base):
     credits = Column(Integer, nullable=False)
     n_teachers = Column(Integer)
     hod = Column(String(50), ForeignKey(
-        "teachers.id", ondelete='SET NULL'), nullable=False)
+        "teachers.id", ondelete='SET NULL'))
 
     # Many-To-Many relationship
     course_association = relationship(
@@ -40,7 +40,7 @@ class Department(BaseModel, Base):
     students = relationship(
         "Student", back_populates="department")
     assignments = relationship(
-        "Assignment", back_populates="department", cascade='delete, delete-orphan')
+        "Assignment", back_populates="department", cascade='delete, delete-orphan', lazy='noload')
 
 
 class DepartmentCourse(BaseModel, Base):
