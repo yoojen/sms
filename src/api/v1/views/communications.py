@@ -64,7 +64,7 @@ def create_communication():
     data = dict(request.form)
     # Check if teacher, department or course really exist
     from models.teachers_and_degree import Teacher
-    from models.courses_departments import Department
+    from _courses_departments import Department
     teacher = db.get_by_id(Teacher, data['teacher_id'])
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
