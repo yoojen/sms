@@ -8,6 +8,9 @@
   </head>
   <body>
     <form>
+      {%if messages%} {% for message in messages %}
+      <p style="color: red; text-align: center">{{ message[1] }}</p>
+      {% endfor %} {%endif%}
       <h1>Login</h1>
       <label for="email">Email</label>
       <input type="email" name="email" id="" required />

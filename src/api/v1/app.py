@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from flask_login import LoginManager
+from flask_login import LoginManager, login_required
 from api.engine import db
 from api.v1.views import (course_blueprint,
                           dept_blueprint,
@@ -18,10 +18,11 @@ HOST = '127.0.0.1'
 PORT = 5000
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'not secret'
+course_blueprint.route = login_required(
+    course_blueprint.route)  # Wrap the route decorator
 login_manager = LoginManager()
 login_manager.login_view = 'auth_blueprint.login'
 login_manager.init_app(app)
-
 
 app.register_blueprint(auth_blueprint)
 app.register_blueprint(course_blueprint)
@@ -77,6 +78,8 @@ def forbiden_handler(error):
 def unauthorized_handler(error):
     """Unauthorized handler"""
     return jsonify({"error": "Unauthorized"}), 403
+# from flask_login import login_required
+# g.login_required = login
 
 
 if __name__ == "__main__":
