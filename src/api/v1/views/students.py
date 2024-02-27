@@ -67,9 +67,9 @@ def single_students(regno):
 def create_student():
     """function that handles creation endpoint for Student instance"""
     data = dict(request.get_json())
-    dept = db.get_by_id(Department, data['dept_id'])
-    if not dept:
-        return jsonify(ERROR='Department not exists')
+    # dept = db.get_by_id(Department, data['dept_id'])
+    # if not dept:
+    #     return jsonify(ERROR='Department not exists'), 404
 
     password_bytes = data.get('password').encode()
     hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())

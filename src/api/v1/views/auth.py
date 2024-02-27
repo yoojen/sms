@@ -1,6 +1,6 @@
 from api.engine import db
 from api.v1.views import auth_blueprint
-from flask import jsonify, redirect, render_template, request, url_for
+from flask import get_flashed_messages, jsonify, redirect, render_template, request, url_for
 import bcrypt
 from models.roles_and_admins import Admin
 from models.students import Student
@@ -20,7 +20,8 @@ def index():
 
 @auth_blueprint.route('/login')
 def login():
-    return render_template('login.html')
+    messages = get_flashed_messages(with_categories=True)
+    return render_template('login.html', messages=messages)
 
 
 @auth_blueprint.route('/login', methods=['POST'])

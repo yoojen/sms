@@ -1,3 +1,4 @@
+from flask_login import current_user, login_required
 from models.assignments import Assignment
 from api.v1.views import assignm_blueprint
 from api.engine import db
@@ -11,18 +12,17 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @assignm_blueprint.route('/assignments', methods=['GET'], strict_slashes=False)
+@login_required
 def assignments():
     """returns all Assignments objects from the db"""
-
     new_obj = {}
     all_assignms = []
     assignms = db.get_all_object(Assignment)
     for assignm in assignms:
-        # courses = [
-        #     f'{BASE_URL}/courses/{course.course_code}'
-        #     for course in assignm.course] -- NOT YET IMPLEMENTED
+        print(assignm.department)
+        course = assignm.course.to_json()
 
-        teacher = f'{BASE_URL}/teachers/{assignm.teachers.id}'
+        teacher = assignm.teachers.to_json()
 
         submissions = [
             f'{BASE_URL}/submissions/{subm.id}'
@@ -35,7 +35,16 @@ def assignments():
                 new_obj[k] = v
         new_obj['teacher'] = teacher
         new_obj['submissions'] = submissions
-        all_assignms.append(new_obj)
+        new_obj['course'] = course
+        if current_user.__tablename__ == 'admins':
+            all_assignms.append(new_obj)
+        elif current_user.__tablename__ == 'teachers':
+            if assignm in current_user.assignments:
+                all_assignms.append(new_obj)
+        elif current_user.__tablename__ == 'students':
+            if current_user.department:
+                if current_user.department in assignm.department:
+                    all_assignms.append(new_obj)
         new_obj = {}
     return jsonify({"assignments": all_assignms}), 200
 
@@ -63,7 +72,7 @@ def one_assignment(id):
         if request.args:
             args_dict = dict(request.args)
             data, status_code = args_handler(assignm, args_dict)
-            return jsonify([data]), status_code
+            return jsonify(data), status_code
         return jsonify({"assignment": new_obj}), 200
     else:
         return jsonify(ERROR="Not found"), 404
@@ -152,8 +161,8 @@ def args_handler(assignment, args):
     if args.get('submissions') == 'true':
         assignm_submissions = find_assignm_submissions(assignment)
         status_code = 200
-        return jsonify({"assingment": assignment.assign_title,
-                        "submissions": assignm_submissions}), status_code
+        return {"assingment": assignment.assign_title,
+                "submissions": assignm_submissions}, status_code
     elif args.get('teachers') == 'true':
         assig_teacher = find_assingm_teachers(assignment)
         status_code = 200

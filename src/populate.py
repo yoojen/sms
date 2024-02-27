@@ -15,14 +15,14 @@ db = storage.DB()
 
 db.reload()
 
-eugene = Student(regno=221003870, first_name="MUTUYIMANA", last_name="Eugene",
+eugene = Student(regno=221003870, first_name="MUTUYIMANA", last_name="Eugene", tel='0720921921',
                  email="eugen@gmai.com", password="Eugene123", dob=datetime.utcnow(),
                  dept_id=4, year_of_study=3, citizenship="Rwanda")
-db.create_object(eugene)
+# db.create_object(eugene)
 
 admin = Admin(first_name="Eugene",
               last_name="Mutuyimana",
-              email="yoojen@google.com",
+              email="yoojen@google.com", tel='0781231232', citizenship="Nigeria",
               password="test", dob=datetime.utcnow(),
               last_login=datetime.utcnow())
 
@@ -32,7 +32,7 @@ tchr = Teacher(
     first_name='Mushimwe',
     last_name='Jean',
     email='jean@google.com',
-    password="google.123",
+    password="google.123", tel='0781344312', citizenship='Uganda',
     dob=datetime.utcnow(),
     staff_member=False)
 
@@ -54,7 +54,7 @@ db.create_object(course)
 assgn = Assignment(teacher_id=tchr.id,
                    dept_id=dept.dept_code,
                    course_id=course.course_code, assign_title="analysing data",
-                   year_of_study=3, due_date=datetime.utcnow(), file_path="/home")
+                   year_of_study=3, due_date=datetime.utcnow(), link="/home")
 
 db.create_object(assgn)
 
@@ -66,7 +66,7 @@ dept_course = DepartmentCourse(
 db.create_object(dept_course)
 
 mat = Material(course_code=course.course_code, teacher_id=tchr.id,
-               year_of_study=3, description="Big data book", file_path='/bit/big_data')
+               year_of_study=3, description="Big data book", link='/bit/big_data')
 
 db.create_object(mat)
 
@@ -97,7 +97,7 @@ score = Score(teacher_id=tchr.id, student_id=eugene.regno, dept_id=dept.dept_cod
 db.create_object(score)
 
 subm = Submission(course_code=3, dept_id=dept.dept_code, student_id=eugene.regno,
-                  assign_id=assgn.id, year_of_study=3, file_path='/rmt/submission')
+                  assign_id=assgn.id, year_of_study=3, link='/rmt/submission')
 
 db.create_object(subm)
 

@@ -10,7 +10,7 @@ class Assignment(BaseModel, Base):
     teacher_id = Column(Integer, ForeignKey(
         "teachers.id", ondelete='CASCADE'), nullable=False)
     dept_id = Column(String(10), ForeignKey(
-        "departments.dept_code"), nullable=False)
+        "departments.dept_code", ondelete='CASCADE'), nullable=False)
     course_id = Column(String(10), ForeignKey(
         "courses.course_code"), nullable=False)
     assign_title = Column(String(50), nullable=False)
@@ -24,3 +24,6 @@ class Assignment(BaseModel, Base):
         "Teacher", back_populates="assignments")
     submissions = relationship(
         "Submission", back_populates="assignment", cascade='all, delete-orphan')
+
+    department = relationship("Department", back_populates='assignments')
+    course = relationship("Course", back_populates="assignments")

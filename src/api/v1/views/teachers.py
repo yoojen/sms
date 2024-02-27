@@ -34,7 +34,7 @@ def teachers():
                 f'{BASE_URL}/materials/{material.id }' for material in tchr.materials]
 
             for k, v in tchr.to_json().items():
-                if k in ['id', 'first_name', 'last_name',  'email', 'password', 'citizenship', 'tel',
+                if k in ['id', 'first_name', 'last_name',  'email', 'citizenship', 'tel',
                          'dob', 'staff_member', 'last_login', 'created_at', 'updated_at']:
                     new_obj[k] = v
 
@@ -49,7 +49,7 @@ def teachers():
             all_teachers.append(new_obj)
             new_obj = {}
         return jsonify({"teachers": all_teachers}), 200
-    return jsonify(message="Nothing found"), 404
+    return jsonify([]), 200
 
 
 @teacher_bp.route('/teachers/<int:id>', methods=['GET'], strict_slashes=False)
@@ -72,7 +72,7 @@ def single_teacher(id):
             f'{BASE_URL}/materials/{material.id }' for material in teacher.materials]
 
         for k, v in teacher.to_json().items():
-            if k in ['id', 'first_name', 'last_name',  'email', 'password', 'citizenship', 'tel',
+            if k in ['id', 'first_name', 'last_name',  'email', 'citizenship', 'tel',
                      'dob', 'staff_member', 'last_login', 'created_at', 'updated_at']:
                 new_obj[k] = v
 
@@ -84,7 +84,7 @@ def single_teacher(id):
         new_obj['assignments'] = assignments
 
         return jsonify({"teacher": new_obj}), 200
-    return jsonify(message="Nothing found"), 404
+    return jsonify([]), 200
 
 
 @teacher_bp.route('/teachers', methods=['POST'],

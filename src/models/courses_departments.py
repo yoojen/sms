@@ -39,6 +39,8 @@ class Department(BaseModel, Base):
         "Score", back_populates='department', cascade='delete, delete-orphan')
     students = relationship(
         "Student", back_populates="department")
+    assignments = relationship(
+        "Assignment", back_populates="department", cascade='delete, delete-orphan')
 
 
 class DepartmentCourse(BaseModel, Base):
@@ -83,4 +85,7 @@ class Course(BaseModel, Base):
                           cascade='all, delete-orphan')
     creator = relationship("Admin", back_populates='courses')
 
-    materials = relationship("Material", back_populates='course')
+    materials = relationship(
+        "Material", back_populates='course', cascade='delete, delete-orphan')
+    assignments = relationship(
+        "Assignment", back_populates="course", cascade='delete, delete-orphan')

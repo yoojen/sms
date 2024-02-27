@@ -1,7 +1,7 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from models.base_model import BaseModel, Base
-from uuid import uuid4
 
 
 class TeacherCourse(BaseModel, Base):
@@ -12,7 +12,7 @@ class TeacherCourse(BaseModel, Base):
         "teachers.id", ondelete='CASCADE'), nullable=False)
     course_code = Column(String(10), ForeignKey(
         "courses.course_code", ondelete='CASCADE'), nullable=False)
-    date_assigned = Column(DateTime, nullable=False)
+    date_assigned = Column(DateTime, nullable=False, default=datetime.utcnow())
 
     course = relationship("Course", back_populates="teacher_association")
     teacher = relationship("Teacher", back_populates='course_association')
