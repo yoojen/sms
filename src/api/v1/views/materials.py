@@ -133,6 +133,7 @@ def create_material():
             return jsonify({"message": "Not created", "error": str(e)}), 400
         return jsonify({"message": "Successfully created",
                         "location": created.file_path}), 201
+    return jsonify(ERROR='Admins only')
 
 
 @material_blueprint.route('/materials/<int:id>', methods=['PUT'],
@@ -151,6 +152,7 @@ def update_department(id):
             return jsonify(ERROR=str(error)), 400
         return jsonify({"message": "Successfully updated",
                         "id": updated.id}), 201
+    return jsonify(ERROR='Admins only')
 
 
 @material_blueprint.route('/materials/<int:id>', methods=['DELETE'],
@@ -159,11 +161,14 @@ def update_department(id):
 def delete_material(id):
     """function for delete endpoint, it handles Material deletion"""
 
-    try:
-        db.delete(Material, id)
-    except NoResultFound as e:
-        return jsonify(ERROR=str(e)), 400
-    return jsonify(message="Successfully deleted material"), 200
+    if current_user.__tablename__ == 'admins' \
+            or current_user.__tablename__ == 'students':
+        try:
+            db.delete(Material, id)
+        except NoResultFound as e:
+            return jsonify(ERROR=str(e)), 400
+        return jsonify(message="Successfully deleted material"), 200
+    return jsonify(ERROR='Admins only')
 
 
 # helpers
