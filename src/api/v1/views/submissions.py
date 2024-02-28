@@ -1,3 +1,4 @@
+from api.v1.authorize import find_dept, is_teacher
 from models.assignments import Assignment
 from models.courses_departments import Course, Department
 from models.students import Student
@@ -8,7 +9,7 @@ from flask_login import current_user, login_required
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
-from datetime import datetime
+from models.teachers_and_degree import Teacher
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -20,12 +21,11 @@ def submissions():
     new_obj = {}
     all_submissions = []
     subms = db.get_all_object(Submission)
+    if current_user.__tablename__ == 'students':
+        # ass_tchr = current_user
+        usr_dept = current_user.department
     if subms:
         for subm in subms:
-            if current_user.__tablename__ != 'students':
-                ass_tchr = current_user.submission
-            usr_dept = current_user.department
-            department = subm.department.to_json()
             assignment = subm.assignment.to_json()
             student = subm.student.to_json()
 
@@ -35,23 +35,28 @@ def submissions():
                          'created_at', 'updated_at']:
                     new_obj[k] = v
 
-            student['password'] = "***"
+            if student.get('password'):
+                del student['password']
+            if student.get('assignment'):
+                del student['assignment']
+            if student.get('department'):
+                del student['department']
             new_obj['student'] = student
             new_obj['assignment'] = assignment
-            new_obj['department'] = department
 
             if current_user.__tablename__ == 'admins':
                 all_submissions.append(new_obj)
             if current_user.__tablename__ == 'teachers':
-                if subm.department in current_user.departments:
+                tch_dept = is_teacher(current_user.id)
+                dept = find_dept(subm.dept_id)
+                if dept in tch_dept:
+                    new_obj['department'] = dept.to_json().get('dept_code')
                     all_submissions.append(new_obj)
             if current_user.__tablename__ == 'students':
-                if usr_dept == subm.department \
-                        and subm.year_of_study == current_user.year_of_study:
-                    del new_obj['student']['department']
+                dept = find_dept(subm.dept_id)
+                if usr_dept == dept \
+                        and subm.student_id == current_user.regno:
                     all_submissions.append(new_obj)
-                print(all_submissions)
-                print(new_obj['student'])
             new_obj = {}
         return jsonify({"submissions": all_submissions}), 200
     return jsonify(message="Nothing found")
@@ -65,19 +70,51 @@ def single_submission(id):
     new_obj = {}
     subm = db.get_by_id(Submission, id)
     if subm:
-        department = subm.department.to_json()
+        if current_user.__tablename__ == 'students':
+            usr_dept = current_user.department
         assignment = subm.assignment.to_json()
         student = subm.student.to_json()
 
-        for k, v in subm.to_json().items():
-            if k in ['id', 'course_code', 'dept_id',  'student_id',
-                     'assign_id', 'file_path', 'year_of_study',
-                     'created_at', 'updated_at']:
-                new_obj[k] = v
+        if student.get('password'):
+            del student['password']
+        if student.get('assignment'):
+            del student['assignment']
+        if student.get('department'):
+            del student['department']
+        new_obj['student'] = student
+        new_obj['assignment'] = assignment
+
+        if current_user.__tablename__ == 'admins':
+            for k, v in subm.to_json().items():
+                if k in ['id', 'course_code', 'dept_id',  'student_id',
+                         'assign_id', 'file_path', 'year_of_study',
+                         'created_at', 'updated_at']:
+                    new_obj[k] = v
+
+            new_obj['student'] = student
+            new_obj['assignment'] = assignment
+        if current_user.__tablename__ == 'teachers':
+            tch_dept = is_teacher(current_user.id)
+            if subm.department in tch_dept:
+                for k, v in subm.to_json().items():
+                    if k in ['id', 'course_code', 'dept_id',  'student_id',
+                             'assign_id', 'file_path', 'year_of_study',
+                             'created_at', 'updated_at']:
+                        new_obj[k] = v
+
+                new_obj['student'] = student
+                new_obj['assignment'] = assignment
+        if current_user.__tablename__ == 'students':
+            if usr_dept == subm.department \
+                    and subm.student_id == current_user.regno:
+                for k, v in subm.to_json().items():
+                    if k in ['id', 'course_code', 'dept_id',  'student_id',
+                             'assign_id', 'file_path', 'year_of_study',
+                             'created_at', 'updated_at']:
+                        new_obj[k] = v
 
         new_obj['student'] = student
         new_obj['assignment'] = assignment
-        new_obj['department'] = department
 
         return jsonify({"student": new_obj}), 200
     return jsonify(message="Nothing found"), 200
