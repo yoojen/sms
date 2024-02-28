@@ -1,8 +1,9 @@
+from flask_login import current_user, login_required
 from models.courses_departments import Department
 from models.teacher_dept import TeacherDepartments
 from api.v1.views import teacher_bp
 from api.engine import db
-from flask import jsonify, request
+from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import datetime
@@ -13,6 +14,7 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @teacher_bp.route('/teacher_dept', methods=['GET'], strict_slashes=False)
+@login_required
 def teacher_dept():
     """return all teacher and department associations"""
     new_obj = {}
@@ -40,6 +42,7 @@ def teacher_dept():
 
 @teacher_bp.route('/teacher_dept/<int:id>', methods=['GET'],
                   strict_slashes=False)
+@login_required
 def single_teacher_dept(id):
     """return a teacher degree association based on teacher id"""
     new_obj = {}
@@ -62,11 +65,14 @@ def single_teacher_dept(id):
 
 
 @teacher_bp.route('/teacher_dept', methods=['POST'], strict_slashes=False)
+@login_required
 def create_teacher_association():
     """create a teacher degree association instance"""
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     data = dict(request.form)
 
-    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    teacher = db.get_by_id(Teacher, int(data['teacher_id']))
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
     dept = db.get_by_id(Department, data['dept_id'])
@@ -90,14 +96,28 @@ def create_teacher_association():
 
 
 @teacher_bp.route('/teacher_dept/<int:id>', methods=['PUT'], strict_slashes=False)
+@login_required
 def update_association_object(id):
     """update teacher degree association object"""
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     data = dict(request.form)
-    if data.get('teacher_id'):
-        data['teacher_id'] = int(data['teacher_id'])
+
+    teacher = db.get_by_id(Teacher, int(data['teacher_id']))
+    if not teacher:
+        return jsonify(ERROR='Teacher does not exists'), 404
+    dept = db.get_by_id(Department, data['dept_id'])
+    if not dept:
+        return jsonify(ERROR='Department does not exists'), 404
+
+    if data.get('date_assigned'):
+        data['date_assigned'] = datetime.strptime(
+            data['date_assigned'], BaseModel.DATE_FORMAT)
+    data['teacher_id'] = int(data.get('teacher_id'))
     try:
-        # NORMALLY, CHECK ROW WITH TEACHER AND DEGREE ID
-        # IF FOUND UPDATE ANY COLUMN
+        assoc = db.search(TeacherDepartments, **data)
+        if assoc:
+            return jsonify(ERROR='Association alredy exists'), 409
         updated = db.update(TeacherDepartments, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
@@ -106,8 +126,11 @@ def update_association_object(id):
 
 
 @teacher_bp.route('/teacher_dept/<int:id>', methods=['DELETE'], strict_slashes=False)
+@login_required
 def remove_association(id):
     """remove association between degree and teacher"""
+    if current_user.__tablename__ != 'admins':
+        abort(403)
 
     try:
         db.delete(TeacherDepartments, id)

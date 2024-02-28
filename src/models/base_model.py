@@ -18,6 +18,8 @@ class BaseModel:
         new_dict = self.__dict__
         if hasattr(self, '_sa_instance_state'):
             del new_dict['_sa_instance_state']
+        if hasattr(self, 'password'):
+            new_dict['password'] = "***"
         return new_dict
 
     def __str__(self) -> str:

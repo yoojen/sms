@@ -1,8 +1,9 @@
+from flask_login import current_user, login_required
 from models.teachers_and_degree import (Degree,
                                         TeacherDegree, Teacher)
 from api.v1.views import degree_bp
 from api.engine import db
-from flask import jsonify, request
+from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import datetime
@@ -11,6 +12,7 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @degree_bp.route('/degrees', methods=['GET'], strict_slashes=False)
+@login_required
 def get_degrees():
     """return all Degree instance from the storage"""
     new_obj = {}
@@ -26,8 +28,12 @@ def get_degrees():
                     new_obj[k] = v
 
             new_obj['teachers'] = teachers
+            if current_user.__tablename__ == 'admins':
+                all_degrees.append(new_obj)
 
-            all_degrees.append(new_obj)
+            if current_user.__tablename__ == 'teachers':
+                if current_user in degree.teachers:
+                    all_degrees.append(new_obj)
             new_obj = {}
         return jsonify({"degrees": all_degrees}), 200
     return jsonify(message="Nothing found"), 200
@@ -35,27 +41,36 @@ def get_degrees():
 
 @degree_bp.route('/degrees/<int:id>', methods=['GET'],
                  strict_slashes=False)
+@login_required
 def single_degree(id):
     """return single Degree instance from the storage"""
     new_obj = {}
     degree = db.get_by_id(Degree, id)
     if degree:
-        teachers = [f'{BASE_URL}/teachers/{teacher.id }'
-                    for teacher in degree.teachers]
 
-        for k, v in degree.to_json().items():
-            if k in ['id', 'degree_name', 'created_at', 'updated_at']:
-                new_obj[k] = v
-
-        new_obj['teachers'] = teachers
+        if current_user.__tablename__ == 'admins':
+            teachers = [f'{BASE_URL}/teachers/{teacher.id }'
+                        for teacher in degree.teachers]
+            for k, v in degree.to_json().items():
+                if k in ['id', 'degree_name', 'created_at', 'updated_at']:
+                    new_obj[k] = v
+                    new_obj['teachers'] = teachers
+        if current_user.__tablename__ == 'teachers':
+            if degree in current_user.degrees:
+                for k, v in degree.to_json().items():
+                    if k in ['id', 'degree_name', 'created_at', 'updated_at']:
+                        new_obj[k] = v
         return jsonify({"degrees": new_obj}), 200
     return jsonify(message="Nothing found"), 200
 
 
 @degree_bp.route('/degrees', methods=['POST'],
                  strict_slashes=False)
+@login_required
 def create_degree():
     """function that handles creation endpoint for Degree instance"""
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     data = dict(request.form)
     try:
         # check if it exists
@@ -69,8 +84,11 @@ def create_degree():
 
 @degree_bp.route('/degrees/<int:id>', methods=['PUT'],
                  strict_slashes=False)
+@login_required
 def update_degree(id):
     """ function that handles update endpoint for Degree instance"""
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     data = dict(request.form)
     try:
         updated = db.update(Degree, id, **data)
@@ -82,9 +100,11 @@ def update_degree(id):
 
 @degree_bp.route('/degrees/<int:id>', methods=['DELETE'],
                  strict_slashes=False)
+@login_required
 def delete_degree(id):
     """function for delete endpoint, it handles Degree deletion"""
-
+    if current_user.__tablename__ == 'students':
+        abort(403)
     try:
         db.delete(Degree, id)
     except NoResultFound as e:
@@ -94,6 +114,7 @@ def delete_degree(id):
 
 # teacher_degree association endpoints
 @degree_bp.route('/teacher_degree', methods=['GET'], strict_slashes=False)
+@login_required
 def teacher_degree():
     """return all teacher and degree associations"""
     new_obj = {}
@@ -121,6 +142,7 @@ def teacher_degree():
 
 @degree_bp.route('/teacher_degree/<int:id>', methods=['GET'],
                  strict_slashes=False)
+@login_required
 def single_teacher_degree(id):
     """return a teacher degree association based on teacher id"""
     new_obj = {}
@@ -143,8 +165,11 @@ def single_teacher_degree(id):
 
 
 @degree_bp.route('/teacher_degree', methods=['POST'], strict_slashes=False)
+@login_required
 def create_teacherdegree_association():
     """create a teacher degree association instance"""
+    if current_user.__tablename__ == 'students':
+        abort(403)
     data = dict(request.form)
     data['teacher_id'] = int(data.get('teacher_id'))
     # check if degree or teacher exists in db
@@ -167,8 +192,11 @@ def create_teacherdegree_association():
 
 
 @degree_bp.route('/teacher_degree/<int:id>', methods=['PUT'], strict_slashes=False)
+@login_required
 def update_association_object(id):
     """update teacher degree association object"""
+    if current_user.__tablename__ == 'students':
+        abort(403)
     data = dict(request.form)
     if data.get('teacher_id'):
         data['teacher_id'] = int(data['teacher_id'])
@@ -185,9 +213,11 @@ def update_association_object(id):
 
 
 @degree_bp.route('/teacher_degree/<int:id>', methods=['DELETE'], strict_slashes=False)
+@login_required
 def remove_association(id):
     """remove association between degree and teacher"""
-
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     try:
         db.delete(TeacherDegree, id)
     except NoResultFound as e:

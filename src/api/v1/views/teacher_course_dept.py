@@ -1,18 +1,20 @@
+from flask_login import current_user
 from models.teacher_course import TeacherCourse
 from models.courses_departments import Course, Department, DepartmentCourse
 from api.v1.views import course_blueprint
 from api.engine import db
-from flask import jsonify, request
+from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import datetime
-
+from flask_login import login_required
 from models.teachers_and_degree import Teacher
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @course_blueprint.route('/teacher_course', methods=['GET'], strict_slashes=False)
+@login_required
 def teacher_course():
     """return all teacher and courses associations"""
     new_obj = {}
@@ -32,6 +34,7 @@ def teacher_course():
             new_obj['teacher'] = teacher
             new_obj['course'] = course
             all_associations.append(new_obj)
+            print(all_associations)
             new_obj = {}
         return jsonify({"teacher-course associations": all_associations}), 200
     else:
@@ -40,6 +43,7 @@ def teacher_course():
 
 @course_blueprint.route('/teacher_course/<int:id>', methods=['GET'],
                         strict_slashes=False)
+@login_required
 def single_teacher_course(id):
     """return a teacher degree association based on teacher id"""
     new_obj = {}
@@ -62,6 +66,7 @@ def single_teacher_course(id):
 
 
 @course_blueprint.route('/teacher_course', methods=['POST'], strict_slashes=False)
+@login_required
 def create_teacher_association():
     """create a teacher course association instance"""
     data = dict(request.form)
@@ -91,14 +96,26 @@ def create_teacher_association():
 
 
 @course_blueprint.route('/teacher_course/<int:id>', methods=['PUT'], strict_slashes=False)
+@login_required
 def update_association_object(id):
     """update teacher degree association object"""
+
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     data = dict(request.form)
     if data.get('teacher_id'):
         data['teacher_id'] = int(data['teacher_id'])
+
+    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    if not teacher:
+        return jsonify(ERROR='Teacher does not exists'), 404
+    crs = db.get_by_id(Department, data['course_code'])
+    if not crs:
+        return jsonify(ERROR='Course does not exists'), 404
     try:
-        # NORMALLY, CHECK ROW WITH TEACHER AND DEGREE ID
-        # IF FOUND UPDATE ANY COLUMN
+        assoc = db.search(TeacherCourse, **data)
+        if assoc:
+            return jsonify(ERROR='Association alredy exists'), 409
         updated = db.update(TeacherCourse, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
@@ -107,9 +124,11 @@ def update_association_object(id):
 
 
 @course_blueprint.route('/teacher_course/<int:id>', methods=['DELETE'], strict_slashes=False)
+@login_required
 def remove_association(id):
     """remove association between degree and teacher"""
-
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     try:
         db.delete(TeacherCourse, id)
     except NoResultFound as e:
@@ -119,6 +138,7 @@ def remove_association(id):
 
 # course and department association endpoints
 @course_blueprint.route('/dept_course', methods=['GET'], strict_slashes=False)
+@login_required
 def dept_course():
     """return all department and courses associations"""
     new_obj = {}
@@ -146,6 +166,7 @@ def dept_course():
 
 @course_blueprint.route('/dept_course/<int:id>', methods=['GET'],
                         strict_slashes=False)
+@login_required
 def single_dept_course(id):
     """return a department-course association based on teacher id"""
     new_obj = {}
@@ -168,8 +189,11 @@ def single_dept_course(id):
 
 
 @course_blueprint.route('/dept_course', methods=['POST'], strict_slashes=False)
+@login_required
 def create_crs_dept_association():
     """create a department-course association instance"""
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     data = dict(request.form)
     dept = db.get_by_id(Department, data['dept_id'])
     if not dept:
@@ -194,8 +218,11 @@ def create_crs_dept_association():
 
 
 @course_blueprint.route('/dept_course/<int:id>', methods=['PUT'], strict_slashes=False)
+@login_required
 def update_dept_crs(id):
     """update department-course association object"""
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     data = dict(request.form)
     if data.get('date_assigned'):
         data['date_assigned'] = datetime.strptime(
@@ -211,9 +238,11 @@ def update_dept_crs(id):
 
 
 @course_blueprint.route('/dept_course/<int:id>', methods=['DELETE'], strict_slashes=False)
+@login_required
 def remove_dept_crs(id):
     """remove association between department-course"""
-
+    if current_user.__tablename__ != 'admins':
+        abort(403)
     try:
         db.delete(DepartmentCourse, id)
     except NoResultFound as e:

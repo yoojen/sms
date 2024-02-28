@@ -1,8 +1,9 @@
+from flask_login import current_user, login_required
 from models.courses_departments import Course, Department
 from models.scores import Score
 from api.v1.views import score_blueprint
 from api.engine import db
-from flask import jsonify, request
+from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import datetime
@@ -15,6 +16,7 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @score_blueprint.route('/scores', methods=['GET'], strict_slashes=False)
+@login_required
 def scores():
     """returns all Score objects from the db"""
 
@@ -22,10 +24,10 @@ def scores():
     all_scores = []
     scores = db.get_all_object(Score)
     for score in scores:
-        teacher = f'{BASE_URL}/teachers/{score.teacher.id}'
-        course = f'{BASE_URL}/courses/{ score.course.course_code}'
-        department = f'{BASE_URL}/departments/{score.department.dept_code}'
-        students = f'{BASE_URL}/students/{score.student.regno}'
+        teacher = score.teacher.to_json() if score.teacher else None
+        course = score.course.to_json()
+        department = score.department.to_json()
+        students = score.student.to_json()
 
         for k, v in score.to_json().items():
             if k in ['id', 'teacher_id', 'student_id',  'dept_id', 'course_code', 'assign_score',
@@ -35,31 +37,61 @@ def scores():
         new_obj['teacher'] = teacher
         new_obj['department'] = department
         new_obj['students'] = students
-        all_scores.append(new_obj)
+
+        if current_user.__tablename__ == 'students':
+            if score.student_id == current_user.regno:
+                all_scores.append(new_obj)
+        if current_user.__tablename__ == 'admins':
+            all_scores.append(new_obj)
+        if current_user.__tablename__ == 'teachers':
+            if score.teacher_id == current_user.id:
+                all_scores.append(new_obj)
         new_obj = {}
     return jsonify({"scores": all_scores}), 200
 
 
 @score_blueprint.route('/scores/<int:id>', methods=['GET'], strict_slashes=False)
+@login_required
 def single_score(id):
     """returns single Score objects from the db"""
 
     new_obj = {}
     score = db.get_by_id(Score, id)
     if score:
-        teacher = f'{BASE_URL}/teachers/{score.teacher.id}'
-        course = f'{BASE_URL}/courses/{ score.course.course_code}'
-        department = f'{BASE_URL}/departments/{score.department.dept_code}'
-        students = f'{BASE_URL}/students/{score.student.regno}'
+        teacher = score.teacher.to_json() if score.teacher else None
+        course = score.course.to_json()
+        department = score.department.to_json()
+        students = score.student.to_json()
 
-        for k, v in score.to_json().items():
-            if k in ['id', 'teacher_id', 'student_id', 'dept_id', 'course_code', 'assign_score',
-                     'cat_score', 'exam_score', 'created_at', 'updated_at']:
-                new_obj[k] = v
-        new_obj['course'] = course
-        new_obj['teacher'] = teacher
-        new_obj['department'] = department
-        new_obj['students'] = students
+        if current_user.__tablename__ == 'students':
+            if score.student_id == current_user.regno:
+                for k, v in score.to_json().items():
+                    if k in ['id', 'teacher_id', 'student_id', 'dept_id', 'course_code', 'assign_score',
+                             'cat_score', 'exam_score', 'created_at', 'updated_at']:
+                        new_obj[k] = v
+                new_obj['course'] = course
+                new_obj['teacher'] = teacher
+                new_obj['department'] = department
+                new_obj['students'] = students
+        if current_user.__tablename__ == 'admins':
+            for k, v in score.to_json().items():
+                if k in ['id', 'teacher_id', 'student_id', 'dept_id', 'course_code', 'assign_score',
+                         'cat_score', 'exam_score', 'created_at', 'updated_at']:
+                    new_obj[k] = v
+            new_obj['course'] = course
+            new_obj['teacher'] = teacher
+            new_obj['department'] = department
+            new_obj['students'] = students
+        if current_user.__tablename__ == 'teachers':
+            if score.teacher_id == current_user.id:
+                for k, v in score.to_json().items():
+                    if k in ['id', 'teacher_id', 'student_id', 'dept_id', 'course_code', 'assign_score',
+                             'cat_score', 'exam_score', 'created_at', 'updated_at']:
+                        new_obj[k] = v
+                new_obj['course'] = course
+                new_obj['teacher'] = teacher
+                new_obj['department'] = department
+                new_obj['students'] = students
 
         # handling url args
         if request.args:
@@ -73,8 +105,11 @@ def single_score(id):
 
 @score_blueprint.route('/scores', methods=['POST'],
                        strict_slashes=False)
+@login_required
 def create_score():
     """function that handles creation endpoint for Score instance"""
+    if current_user.__tablename__ == 'students':
+        abort(403)
     data = dict(request.form)
     teacher = db.get_by_id(Teacher, data['teacher_id'])
     student = db.get_by_id(Student, data['student_id'])
@@ -103,8 +138,11 @@ def create_score():
 
 @score_blueprint.route('/scores/<int:id>', methods=['PUT'],
                        strict_slashes=False)
+@login_required
 def update_score(id):
     """ function that handles update endpoint for Score instance"""
+    if current_user.__tablename__ == 'students':
+        abort(403)
     try:
         data = dict(request.form)
         updated = db.update(Score, id, **data)
@@ -116,9 +154,11 @@ def update_score(id):
 
 @score_blueprint.route('/scores/<int:id>', methods=['DELETE'],
                        strict_slashes=False)
+@login_required
 def delete_score(id):
     """function for delete endpoint, it handles Score deletion"""
-
+    if current_user.__tablename__ == 'students':
+        abort(403)
     try:
         db.delete(Score, id)
     except NoResultFound as e:
