@@ -20,7 +20,7 @@ def assignments():
     all_assignms = []
     assignms = db.get_all_object(Assignment)
     for assignm in assignms:
-        if current_user.__tablename__ != 'students':
+        if current_user.__tablename__ == 'teachers':
             ass_tchr = current_user.assignments
         ass_dept = assignm.department
         course = assignm.course.to_json()
