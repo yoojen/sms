@@ -1,3 +1,4 @@
+from models.roles_and_admins import Admin
 from models.teachers_and_degree import Teacher
 from api.v1.views import teacher_bp
 from api.engine import db
@@ -115,10 +116,9 @@ def single_teacher(id):
 @login_required
 def create_teacher():
     """function that handles creation endpoint for Teacher instance"""
-    if current_user.__tablename__ != 'admins':
-        abort(404)
+    if not isinstance(current_user, Admin):
+        abort(403)
     data = dict(request.form)
-
     try:
         dob = data['dob'].split('-')
         data['dob'] = date(int(dob[0]), int(dob[1]), int(dob[2]))
@@ -143,12 +143,11 @@ def create_teacher():
 @login_required
 def update_teacher(id):
     """ function that handles update endpoint for Teacher instance"""
-    if current_user.__tablename__ != 'admins':
-        abort(404)
+    if not isinstance(current_user, Admin):
+        abort(403)
     data = dict(request.form)
     if data.get('staff_member'):
         data['staff_member'] = True
-    print(data)
     try:
         updated = db.update(Teacher, id, **data)
     except Exception as error:
@@ -162,8 +161,8 @@ def update_teacher(id):
 @login_required
 def delete_teacher(id):
     """function for delete endpoint, it handles Teacher deletion"""
-    if current_user.__tablename__ != 'admins':
-        abort(404)
+    if not isinstance(current_user, Admin):
+        abort(403)
     try:
         db.delete(Teacher, id)
     except NoResultFound as e:

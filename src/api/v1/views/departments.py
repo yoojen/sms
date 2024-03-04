@@ -4,9 +4,11 @@ from models.materials_and_matdept import Material, MaterialDepartments
 from models.base_model import BaseModel
 from api.v1.views import dept_blueprint
 from api.engine import db
-from flask import jsonify, request
+from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
 from datetime import datetime
+from models.roles_and_admins import Admin
+from models.students import Student
 
 from models.teachers_and_degree import Teacher
 
@@ -23,8 +25,6 @@ def departments():
     all_depts = []
     depts = db.get_all_object(Department)
     for dept in depts:
-        if current_user.__tablename__ == 'students':
-            st_dept = current_user.department
         courses = [
             f'{BASE_URL}/courses/{course.course_code}'
             for course in dept.courses if dept.courses]
@@ -60,27 +60,26 @@ def departments():
         new_obj['communications'] = communications
         new_obj['submissions'] = submissions
         new_obj['scores'] = scores
-        if current_user.__tablename__ == 'admins':
+        if isinstance(current_user, Admin):
             all_depts.append(new_obj)
-        if current_user.__tablename__ == 'teachers':
-            if current_user.departments:
+        if isinstance(current_user, Teacher):
+            if current_user in dept.teachers:
                 all_depts.append(new_obj)
-        if current_user.__tablename__ == 'students':
-            if st_dept:
-                if current_user.department == dept:
-                    all_depts.append(new_obj)
+        if isinstance(current_user, Student):
+            if current_user.dept_id == dept.dept_code:
+                all_depts.append(new_obj)
         new_obj = {}
     return jsonify({"departments": all_depts}), 200
 
 
 @dept_blueprint.route('/departments/<code>', methods=['GET'], strict_slashes=False)
+@login_required
 def one_department(code):
     """ endpoint that handle retrival of department by is code"""
+    holder_old = {}
     new_obj = {}
     dept = db.get_by_id(Department, code)
     if dept:
-        if current_user.__tablename__ == 'students':
-            st_dept = current_user.department
         courses = [
             f'{BASE_URL}/courses/{course.course_code}'
             for course in dept.courses if dept.courses]
@@ -110,46 +109,26 @@ def one_department(code):
             args_dict = dict(request.args)
             data, status_code = args_handler(dept, args_dict)
             return jsonify([data]), status_code
+        for k, v in dept.to_json().items():
+            if k in ['dept_code', 'dept_name', 'duration', 'trimester_or_semester',
+                     'n_teachers', 'hod', 'credits', 'created_at', 'updated_at']:
+                holder_old[k] = v
+        holder_old['courses'] = courses
+        holder_old['materials'] = materials
+        holder_old['teachers'] = teachers
+        holder_old['students'] = students
+        holder_old['communications'] = communications
+        holder_old['submissions'] = submissions
+        holder_old['scores'] = scores
 
-        if current_user.__tablename__ == 'admins':
-            for k, v in dept.to_json().items():
-                if k in ['dept_code', 'dept_name', 'duration', 'trimester_or_semester',
-                         'n_teachers', 'hod', 'credits', 'created_at', 'updated_at']:
-                    new_obj[k] = v
-            new_obj['courses'] = courses
-            new_obj['materials'] = materials
-            new_obj['teachers'] = teachers
-            new_obj['students'] = students
-            new_obj['communications'] = communications
-            new_obj['submissions'] = submissions
-            new_obj['scores'] = scores
-        if current_user.__tablename__ == 'teachers':
-            if current_user.departments:
-                for k, v in dept.to_json().items():
-                    if k in ['dept_code', 'dept_name', 'duration', 'trimester_or_semester',
-                             'n_teachers', 'hod', 'credits', 'created_at', 'updated_at']:
-                        new_obj[k] = v
-                new_obj['courses'] = courses
-                new_obj['materials'] = materials
-                new_obj['teachers'] = teachers
-                new_obj['students'] = students
-                new_obj['communications'] = communications
-                new_obj['submissions'] = submissions
-                new_obj['scores'] = scores
-        if current_user.__tablename__ == 'students':
-            if st_dept:
-                if current_user.department == dept:
-                    for k, v in dept.to_json().items():
-                        if k in ['dept_code', 'dept_name', 'duration', 'trimester_or_semester',
-                                 'n_teachers', 'hod', 'credits', 'created_at', 'updated_at']:
-                            new_obj[k] = v
-                    new_obj['courses'] = courses
-                    new_obj['materials'] = materials
-                    new_obj['teachers'] = teachers
-                    new_obj['students'] = students
-                    new_obj['communications'] = communications
-                    new_obj['submissions'] = submissions
-                    new_obj['scores'] = scores
+        if isinstance(current_user, Admin):
+            new_obj = holder_old
+        if isinstance(current_user, Teacher):
+            if current_user in dept.teachers:
+                new_obj = holder_old
+        if isinstance(current_user, Student):
+            if current_user.dept_id == dept.dept_code:
+                new_obj = holder_old
 
         return jsonify({"department": new_obj}), 200
     else:
@@ -157,65 +136,71 @@ def one_department(code):
 
 
 @dept_blueprint.route('/departments/', methods=['POST'], strict_slashes=False)
+@login_required
 def create_department():
     """function that handles creation endpoint for Department instance"""
     data = dict(request.form)
+    if not isinstance(current_user, Admin):
+        abort(403)
     # check for hod
-    hod = db.get_by_id(Teacher, data['hod'])
-    if not hod:
-        return jsonify(ERROR='Teacher not found'), 404
-    if current_user.__tablename__ == 'admins':
-        try:
-            # check if it exists
-            find_dept = db.get_by_id(Department, data['dept_code'])
-            if find_dept:
-                return jsonify(error="Department already exist")
-            created = db.create_object(Department(**data))
-        except ValueError as e:
-            return jsonify({"message": "Not created", "error": str(e)}), 400
-        return jsonify({"message": "Successfully created",
-                        "id": created.dept_name}), 201
-    return jsonify(ERROR='Admins only')
+    if data['hod']:
+        hod = db.get_by_id(Teacher, data['hod'])
+        if not hod:
+            return jsonify(ERROR='Teacher not found'), 404
+    try:
+        # check if it exists
+        find_dept = db.get_by_id(Department, data['dept_code'])
+        if find_dept:
+            return jsonify(error="Department already exist")
+        created = db.create_object(Department(**data))
+    except ValueError as e:
+        return jsonify({"message": "Not created", "error": str(e)}), 400
+    return jsonify({"message": "Successfully created",
+                    "id": created.dept_name}), 201
 
 
 @dept_blueprint.route('/departments/<code>', methods=['PUT'], strict_slashes=False)
+@login_required
 def update_department(code):
     """ function that handles update endpoint for Department instance"""
-    if current_user.__tablename__ == 'admins':
-        try:
-            data = dict(request.form)
-            if data.get('duration'):
-                data['duration'] = int(data.get('duration'))
-            if data.get('credits'):
-                data['credits'] = int(data.get('credits'))
-            if data.get('n_teachers'):
-                data['n_teachers'] = int(data.get('n_teachers'))
+    if not isinstance(current_user, Admin):
+        abort(403)
+    try:
+        data = dict(request.form)
+        if data.get('duration'):
+            data['duration'] = int(data.get('duration'))
+        if data.get('credits'):
+            data['credits'] = int(data.get('credits'))
+        if data.get('n_teachers'):
+            data['n_teachers'] = int(data.get('n_teachers'))
 
-            updated = db.update(Department, code, **data)
-        except Exception as error:
-            return jsonify(ERROR=str(error)), 400
-        return jsonify({"message": "Successfully updated",
-                        "id": updated.dept_code}), 201
-    return jsonify(ERROR='Admins only')
+        updated = db.update(Department, code, **data)
+    except Exception as error:
+        return jsonify(ERROR=str(error)), 400
+    return jsonify({"message": "Successfully updated",
+                    "id": updated.dept_code}), 201
 
 
 @dept_blueprint.route('/departments/<code>', methods=['DELETE'], strict_slashes=False)
+@login_required
 def delete_department(code):
     """function for delete endpoint, it handles course deletion"""
 
-    if current_user.__tablename__ == 'admins':
-        try:
-            db.delete(Department, code)
-        except NoResultFound as e:
-            return jsonify(ERROR=str(e)), 400
-        return jsonify(message="Successfully deleted course"), 200
-    return jsonify(ERROR='Admins only')
+    if not isinstance(current_user, Admin):
+        abort(403)
+    try:
+        db.delete(Department, code)
+    except NoResultFound as e:
+        return jsonify(ERROR=str(e)), 400
+    return jsonify(message="Successfully deleted course"), 200
 
 
 # DEPARTMENT AND MATERIALS ASSOCIATION ENDPOINTS
+"""
 @dept_blueprint.route('/dept_material', methods=['GET'], strict_slashes=False)
+@login_required
 def dept_material():
-    """return all department and material associations"""
+    return all department and material associations
     new_obj = {}
     all_associations = []
     dept_mat_assoc = db.get_all_object(MaterialDepartments)
@@ -241,8 +226,9 @@ def dept_material():
 
 @dept_blueprint.route('/dept_material/<int:id>', methods=['GET'],
                       strict_slashes=False)
+@login_required
 def single_dept_material(id):
-    """return a department-material association"""
+    eturn a department-material association
     new_obj = {}
     td = db.get_by_id(MaterialDepartments, id)
     if td:
@@ -261,21 +247,23 @@ def single_dept_material(id):
     else:
         return jsonify(ERROR="Nothing found")
 
+"""
+
 
 @dept_blueprint.route('/dept_material', methods=['POST'], strict_slashes=False)
+@login_required
 def create_dept_material_ass():
     """create a department-material association instance"""
     data = dict(request.form)
+    if not isinstance(current_user, Admin):
+        abort(403)
     # check material or department existence
-    mat = db.get_by_id(Material, data['material_id'])
+    mat = db.get_by_id(Material, int(data['material_id']))
     if not mat:
         return jsonify(ERROR='Material not found'), 404
     dept = db.get_by_id(Department, data['department_id'])
     if not dept:
         return jsonify(ERROR='Department not found'), 404
-    if data.get('date_uploaded'):
-        data['date_uploaded'] = datetime.strptime(
-            data['date_uploaded'], BaseModel.DATE_FORMAT)
     try:
         # check if it exists
         assoc = db.search(MaterialDepartments, **data)
@@ -289,16 +277,24 @@ def create_dept_material_ass():
 
 
 @dept_blueprint.route('/dept_material/<int:id>', methods=['PUT'], strict_slashes=False)
+@login_required
 def update_dept_material(id):
     """update department-material association object"""
     data = dict(request.form)
-    if data.get('date_uploaded'):
-        data['date_uploaded'] = datetime.strptime(
-            data['date_uploaded'], BaseModel.DATE_FORMAT)
+    if not isinstance(current_user, Admin):
+        abort(403)
+    data['updated_at'] = datetime.utcnow()
     if data.get('material_id'):
+        mat = db.get_by_id(Material, data.get('material_id'))
+        if not mat:
+            return jsonify(ERROR='Materials not exists')
         data['material_id'] = int(data['material_id'])
+    if data.get('department_id'):
+        dept = db.get_by_id(Department, data.get('department_id'))
+        if not dept:
+            return jsonify(ERROR='Department not found')
+
     try:
-        # check existance
         updated = db.update(MaterialDepartments, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
@@ -309,7 +305,8 @@ def update_dept_material(id):
 @dept_blueprint.route('/dept_material/<int:id>', methods=['DELETE'], strict_slashes=False)
 def remove_dept_crs(id):
     """remove association between department-material"""
-
+    if not isinstance(current_user, Admin):
+        abort(403)
     try:
         db.delete(MaterialDepartments, id)
     except NoResultFound as e:

@@ -1,8 +1,9 @@
+from flask_login import current_user, login_required
 from models.roles_and_admins import Role, Admin, RoleAdmin
 from api.v1.views import roles_n_admin_bp
 from api.engine import db
 import bcrypt
-from flask import jsonify, request
+from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
 from models.base_model import BaseModel
 from datetime import date, datetime
@@ -11,8 +12,11 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @roles_n_admin_bp.route('/roles', methods=['GET'], strict_slashes=False)
+@login_required
 def roles():
     """returns all Role objects from the db"""
+    if not isinstance(current_user, Admin):
+        abort(403)
     new_obj = {}
     all_roles = []
     roles = db.get_all_object(Role)
@@ -31,9 +35,11 @@ def roles():
 
 @roles_n_admin_bp.route('/roles/<int:id>', methods=['GET'],
                         strict_slashes=False)
+@login_required
 def one_role(id):
     """returns single Role object from the db"""
-
+    if not isinstance(current_user, Admin):
+        abort(403)
     new_obj = {}
     role = db.get_by_id(Role, id)
     if role:
@@ -57,12 +63,15 @@ def one_role(id):
 
 @roles_n_admin_bp.route('/roles/', methods=['POST'],
                         strict_slashes=False)
+@login_required
 def create_role():
     """function that handles creation endpoint for Role instance"""
     data = dict(request.form)
+    if not isinstance(current_user, Admin):
+        abort(403)
     try:
         # check if it exists
-        role = db.get_by_id(Role, data.get('id'))
+        role = db.search(Role, role_name=data.get('role_name'))
         if role:
             return jsonify(error="Role already exist"), 409
         created = db.create_object(Role(**data))
@@ -74,10 +83,14 @@ def create_role():
 
 @roles_n_admin_bp.route('/roles/<int:id>', methods=['PUT'],
                         strict_slashes=False)
+@login_required
 def update_department(id):
     """ function that handles update endpoint for Role instance"""
+    if not isinstance(current_user, Admin):
+        abort(403)
     try:
         data = dict(request.form)
+        data['updated_at'] = datetime.utcnow()
         if len(data.get('role_name')) < 5:
             return jsonify(ERROR="role name must be atleast 5 characters"), 400
         updated = db.update(Role, id, **data)
@@ -89,8 +102,11 @@ def update_department(id):
 
 @roles_n_admin_bp.route('/roles/<int:id>', methods=['DELETE'],
                         strict_slashes=False)
+@login_required
 def delete_role(id):
     """function for delete endpoint, it handles Role deletion"""
+    if not isinstance(current_user, Admin):
+        abort(403)
     try:
         db.delete(Role, id)
     except NoResultFound as e:
@@ -100,8 +116,11 @@ def delete_role(id):
 
 # admins endpoints
 @roles_n_admin_bp.route('/admins', methods=['GET'], strict_slashes=False)
+@login_required
 def admins():
     """returns all Admin objects from the db"""
+    if not isinstance(current_user, Admin):
+        abort(403)
     new_obj = {}
     all_admins = []
     admins = db.get_all_object(Admin)
@@ -124,8 +143,11 @@ def admins():
 
 
 @roles_n_admin_bp.route('/admins/<int:id>', methods=['GET'], strict_slashes=False)
+@login_required
 def one_admin(id):
     """returns all Admin objects from the db"""
+    if not isinstance(current_user, Admin):
+        abort(403)
     new_obj = {}
     admin = db.get_by_id(Admin, id)
     if admin:
@@ -159,8 +181,12 @@ def one_admin(id):
 
 
 @roles_n_admin_bp.route('/admins/', methods=['POST'], strict_slashes=False)
+@login_required
 def create_admin():
     """function that handles creation endpoint for Admin instance"""
+    admin_roles = [role.role_name for role in current_user.roles]
+    if not 'super admin' in admin_roles:
+        abort(403)
     data = dict(request.form)
     dob = data['dob'].split('-')
     password_bytes = data.get('password').encode()
@@ -181,16 +207,17 @@ def create_admin():
 
 @roles_n_admin_bp.route('/admins/<int:id>', methods=['PUT'],
                         strict_slashes=False)
+@login_required
 def update_admin(id):
     """ function that handles update endpoint for Admin instance"""
+    admin_roles = [role.role_name for role in current_user.roles]
+    if not 'super admin' in admin_roles:
+        abort(403)
     try:
         data = dict(request.form)
         if data.get('dob'):
             data['dob'] = datetime.strptime(data.get('dob'),
                                             BaseModel.DATE_FORMAT)
-        if data.get('last_login'):
-            data['last_login'] = datetime.strptime(data.get('last_login'),
-                                                   BaseModel.DATE_FORMAT)
 
         updated = db.update(Admin, id, **data)
     except Exception as error:
@@ -201,8 +228,12 @@ def update_admin(id):
 
 @roles_n_admin_bp.route('/admins/<int:id>', methods=['DELETE'],
                         strict_slashes=False)
+@login_required
 def delete_admin(id):
     """function for delete endpoint, it handles Admin deletion"""
+    admin_roles = [role.role_name for role in current_user.roles]
+    if not 'super admin' in admin_roles:
+        abort(403)
     try:
         db.delete(Admin, id)
     except NoResultFound as e:
@@ -212,21 +243,24 @@ def delete_admin(id):
 
 # role_admin endnpoints
 @roles_n_admin_bp.route('/admin_role', methods=['POST'], strict_slashes=False)
+@login_required
 def create_adminrole():
     """create association between admin and roles"""
+    admin_roles = [role.role_name for role in current_user.roles]
+    if not 'super admin' in admin_roles:
+        abort(403)
     data = dict(request.form)
-    admin = db.get_by_id(Admin, data['created_by'])
+    admin = db.get_by_id(Admin, data['admin_id'])
     if not admin:
         return jsonify(ERROR='Admin not exists'), 404
     role = db.get_by_id(Role, data['role_id'])
     if not role:
         return jsonify(ERROR='Role not found')
 
-    admin_roles = db.get_all_object(RoleAdmin)
-    for admin_role in admin_roles:
-        if int(data.get('admin_id')) == int(admin_role.admin_id) \
-                and int(data.get('role_id')) == int(admin_role.role_id):
-            return jsonify(ERROR='Association exists'), 409
+    ad_roles = db.search(RoleAdmin, admin_id=int(data.get(
+        'admin_id')), role_id=int(data.get('role_id')))
+    if ad_roles:
+        return jsonify(ERROR='Association exists'), 409
     try:
         created = db.create_object(RoleAdmin(**data))
     except Exception as error:
@@ -237,13 +271,13 @@ def create_adminrole():
 @roles_n_admin_bp.route('/admin_role/<int:id>', methods=['PUT', 'DELETE'], strict_slashes=False)
 def put_delete_adminrole(id):
     """handles update and delete of admin_role association"""
+    admin_roles = [role.role_name for role in current_user.roles]
+    if not 'super admin' in admin_roles:
+        abort(403)
     admin_role = db.get_by_id(RoleAdmin, id)
     data = dict(request.form)
     if admin_role:
         if request.method == 'PUT':
-            if data.get('date_granted'):
-                data['date_granted'] = datetime.strptime(
-                    data.get('date_granted'), BaseModel.DATE_FORMAT)
             try:
                 updated = db.update(RoleAdmin, id, **data)
             except Exception as error:
@@ -251,8 +285,6 @@ def put_delete_adminrole(id):
             return jsonify({"message": "Successfully updated",
                             "id": updated.id}), 201
         if request.method == 'DELETE':
-            # I HAVE TO REFINE THIS
-            # FIND ROLE_ADMIN BASED ON FOUND ADMIN_ID AND ROLE_ID
             try:
                 db.delete(RoleAdmin, id)
             except NoResultFound as e:

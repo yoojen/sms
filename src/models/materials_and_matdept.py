@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.associationproxy import association_proxy
-from models.base_model import BaseModel, Base
+from models.base_model import BaseModel, Base, datetime
 
 
 class Material(BaseModel, Base):
@@ -33,7 +33,7 @@ class MaterialDepartments(BaseModel, Base):
         "materials.id", ondelete='CASCADE'), nullable=False)
     department_id = Column(String(10), ForeignKey(
         "departments.dept_code", ondelete='CASCADE'), nullable=False)
-    date_uploaded = Column(DateTime, nullable=False)
+    date_uploaded = Column(DateTime, default=datetime.utcnow(), nullable=False)
 
     department = relationship(
         "Department", back_populates="material_association")

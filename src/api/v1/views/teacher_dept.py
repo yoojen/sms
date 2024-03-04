@@ -1,5 +1,6 @@
 from flask_login import current_user, login_required
 from models.courses_departments import Department
+from models.roles_and_admins import Admin
 from models.teacher_dept import TeacherDepartments
 from api.v1.views import teacher_bp
 from api.engine import db
@@ -68,7 +69,7 @@ def single_teacher_dept(id):
 @login_required
 def create_teacher_association():
     """create a teacher degree association instance"""
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
 
@@ -99,7 +100,7 @@ def create_teacher_association():
 @login_required
 def update_association_object(id):
     """update teacher degree association object"""
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
 
@@ -110,9 +111,6 @@ def update_association_object(id):
     if not dept:
         return jsonify(ERROR='Department does not exists'), 404
 
-    if data.get('date_assigned'):
-        data['date_assigned'] = datetime.strptime(
-            data['date_assigned'], BaseModel.DATE_FORMAT)
     data['teacher_id'] = int(data.get('teacher_id'))
     try:
         assoc = db.search(TeacherDepartments, **data)
@@ -129,7 +127,7 @@ def update_association_object(id):
 @login_required
 def remove_association(id):
     """remove association between degree and teacher"""
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
 
     try:

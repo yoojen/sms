@@ -1,5 +1,6 @@
 from flask_login import current_user, login_required
 from models.courses_departments import Course, Department
+from models.roles_and_admins import Admin
 from models.scores import Score
 from api.v1.views import score_blueprint
 from api.engine import db
@@ -38,12 +39,12 @@ def scores():
         new_obj['department'] = department
         new_obj['students'] = students
 
-        if current_user.__tablename__ == 'students':
+        if isinstance(current_user, Student):
             if score.student_id == current_user.regno:
                 all_scores.append(new_obj)
-        if current_user.__tablename__ == 'admins':
+        if isinstance(current_user, Admin):
             all_scores.append(new_obj)
-        if current_user.__tablename__ == 'teachers':
+        if isinstance(current_user, Teacher):
             if score.teacher_id == current_user.id:
                 all_scores.append(new_obj)
         new_obj = {}
@@ -54,7 +55,7 @@ def scores():
 @login_required
 def single_score(id):
     """returns single Score objects from the db"""
-
+    holder_old = {}
     new_obj = {}
     score = db.get_by_id(Score, id)
     if score:
@@ -63,41 +64,30 @@ def single_score(id):
         department = score.department.to_json()
         students = score.student.to_json()
 
-        if current_user.__tablename__ == 'students':
-            if score.student_id == current_user.regno:
-                for k, v in score.to_json().items():
-                    if k in ['id', 'teacher_id', 'student_id', 'dept_id', 'course_code', 'assign_score',
-                             'cat_score', 'exam_score', 'created_at', 'updated_at']:
-                        new_obj[k] = v
-                new_obj['course'] = course
-                new_obj['teacher'] = teacher
-                new_obj['department'] = department
-                new_obj['students'] = students
-        if current_user.__tablename__ == 'admins':
-            for k, v in score.to_json().items():
-                if k in ['id', 'teacher_id', 'student_id', 'dept_id', 'course_code', 'assign_score',
-                         'cat_score', 'exam_score', 'created_at', 'updated_at']:
-                    new_obj[k] = v
-            new_obj['course'] = course
-            new_obj['teacher'] = teacher
-            new_obj['department'] = department
-            new_obj['students'] = students
-        if current_user.__tablename__ == 'teachers':
-            if score.teacher_id == current_user.id:
-                for k, v in score.to_json().items():
-                    if k in ['id', 'teacher_id', 'student_id', 'dept_id', 'course_code', 'assign_score',
-                             'cat_score', 'exam_score', 'created_at', 'updated_at']:
-                        new_obj[k] = v
-                new_obj['course'] = course
-                new_obj['teacher'] = teacher
-                new_obj['department'] = department
-                new_obj['students'] = students
-
         # handling url args
         if request.args:
             args_dict = dict(request.args)
             data, status_code = args_handler(score, args_dict)
             return jsonify([data]), status_code
+
+        for k, v in score.to_json().items():
+            if k in ['id', 'teacher_id', 'student_id', 'dept_id',
+                     'course_code', 'assign_score',
+                     'cat_score', 'exam_score', 'created_at', 'updated_at']:
+                holder_old[k] = v
+        holder_old['course'] = course
+        holder_old['teacher'] = teacher
+        holder_old['department'] = department
+        holder_old['students'] = students
+        if isinstance(current_user, Student):
+            if score.student_id == current_user.regno:
+                new_obj = holder_old
+        if isinstance(current_user, Admin):
+            new_obj = holder_old
+        if isinstance(current_user, Teacher):
+            if score.teacher_id == current_user.id:
+                new_obj = holder_old
+
         return jsonify({"scores": new_obj}), 200
     else:
         return jsonify(ERROR="Not found"), 404
@@ -108,32 +98,44 @@ def single_score(id):
 @login_required
 def create_score():
     """function that handles creation endpoint for Score instance"""
-    if current_user.__tablename__ == 'students':
-        abort(403)
     data = dict(request.form)
-    teacher = db.get_by_id(Teacher, data['teacher_id'])
-    student = db.get_by_id(Student, data['student_id'])
+    if isinstance(current_user, Student):
+        abort(403)
+
+    if isinstance(current_user, Admin):
+        data['teacher_id'] = None
+
+    student = db.get_by_id(Student, int(data.get('student_id')))
     dept = db.get_by_id(Department, data['dept_id'])
     course = db.get_by_id(Course, data['course_code'])
 
-    if not teacher:
-        return jsonify(ERROR='Teacher not exists')
     if not student:
         return jsonify(ERROR='Student not exists')
     if not dept:
         return jsonify(ERROR='Department not exists')
     if not course:
         return jsonify(ERROR='Course not exists')
+    if course not in dept.courses:
+        return jsonify(ERROR='Department and course conflict')
+
+    # check if teacher has access to dept & course
+    if isinstance(current_user, Teacher):
+        if set([dept]) & set(current_user.departments):
+            data['teacher_id'] = int(current_user.id)
+        else:
+            abort(403)
     try:
         # check if it exists
-        find_Score = db.get_by_id(Score, data.get('id'))
-        if find_Score:
+        find_score = db.search(Score, student_id=int(data.get('student_id')),
+                               dept_id=data.get('dept_id'),
+                               course_code=data.get('course_code'))
+        if find_score:
             return jsonify(error="Score already exist"), 409
         created = db.create_object(Score(**data))
     except ValueError as e:
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
-                    "created_by": created.teacher.email}), 201
+                    "created_by": created.id}), 201
 
 
 @score_blueprint.route('/scores/<int:id>', methods=['PUT'],
@@ -141,8 +143,13 @@ def create_score():
 @login_required
 def update_score(id):
     """ function that handles update endpoint for Score instance"""
-    if current_user.__tablename__ == 'students':
+    if isinstance(current_user, Student):
         abort(403)
+
+    if isinstance(current_user, Teacher):
+        score = db.get_by_id(Score, int(id))
+        if score.teacher != current_user:
+            abort(403)
     try:
         data = dict(request.form)
         updated = db.update(Score, id, **data)
@@ -157,8 +164,13 @@ def update_score(id):
 @login_required
 def delete_score(id):
     """function for delete endpoint, it handles Score deletion"""
-    if current_user.__tablename__ == 'students':
+    if isinstance(current_user, Student):
         abort(403)
+
+    if isinstance(current_user, Teacher):
+        score = db.get_by_id(Score, int(id))
+        if score.teacher != current_user:
+            abort(403)
     try:
         db.delete(Score, id)
     except NoResultFound as e:

@@ -1,9 +1,8 @@
-import json
 from flask_login import current_user, login_required
 from models.assignments import Assignment
 from api.v1.views import assignm_blueprint
 from api.engine import db
-from flask import jsonify, request
+from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound, IntegrityError
 from models.base_model import BaseModel
 from datetime import datetime
@@ -20,8 +19,6 @@ def assignments():
     all_assignms = []
     assignms = db.get_all_object(Assignment)
     for assignm in assignms:
-        if current_user.__tablename__ == 'teachers':
-            ass_tchr = current_user.assignments
         ass_dept = assignm.department
         course = assignm.course.to_json()
         teacher = assignm.teachers.to_json()
@@ -40,21 +37,14 @@ def assignments():
         new_obj['submissions'] = submissions
         new_obj['course'] = course
         if current_user.__tablename__ == 'students':
-            if current_user.department:
-                if ass_dept == current_user.department and \
-                        assignm.year_of_study == current_user.year_of_study:
-                    all_assignms.append(new_obj)
+            if ass_dept == current_user.department and \
+                    assignm.year_of_study == current_user.year_of_study:
+                all_assignms.append(new_obj)
         if current_user.__tablename__ == 'admins':
             all_assignms.append(new_obj)
         if current_user.__tablename__ == 'teachers':
-            tch_ass = current_user.assignments
-            for ass in tch_ass:
-                prsd = ass.to_json()
-                prsd['course'] = prsd['course'].to_json()
-                prsd['department'] = prsd['department'].to_json()
-                del prsd['submissions']
-                del prsd['teachers']
-                all_assignms.append(prsd)
+            if assignm.teachers == current_user:
+                all_assignms.append(new_obj)
     return jsonify({"assignments": all_assignms}), 200
 
 
@@ -63,12 +53,12 @@ def assignments():
 def one_assignment(id):
     """ endpoint that handle retrival of department by is code"""
     new_obj = {}
+    holder_obj = {}
     assignm = db.get_by_id(Assignment, id)
     if assignm:
         ass_dept = assignm.department
         course = assignm.course.to_json()
-
-        teacher = f'{BASE_URL}/teachers/{assignm.teachers.id}'
+        teacher = assignm.teachers.to_json()
 
         submissions = [
             f'{BASE_URL}/submissions/{subm.id}'
@@ -79,41 +69,25 @@ def one_assignment(id):
             args_dict = dict(request.args)
             data, status_code = args_handler(assignm, args_dict)
             return jsonify(data), status_code
-
+        for k, v in assignm.to_json().items():
+            if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
+                     'year_of_study', 'due_date', 'description', 'link',
+                     'created_at', 'updated_at']:
+                holder_obj[k] = v
+        holder_obj['teacher'] = teacher
+        holder_obj['course'] = course
+        holder_obj['submissions'] = submissions
         if current_user.__tablename__ == 'admins':
             """display course based on admin credentials"""
-            for k, v in assignm.to_json().items():
-                if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
-                         'year_of_study', 'due_date', 'description', 'link',
-                         'created_at', 'updated_at']:
-                    new_obj[k] = v
-            new_obj['teacher'] = teacher
-            new_obj['course'] = course
-            new_obj['submissions'] = submissions
+            new_obj = holder_obj
         if current_user.__tablename__ == 'teachers':
-            if current_user.assignments:
-                if assignm in current_user.assignments:
-                    for k, v in assignm.to_json().items():
-                        if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
-                                 'year_of_study', 'due_date', 'description', 'link',
-                                 'created_at', 'updated_at']:
-                            new_obj[k] = v
-                    new_obj['course'] = course
-                    new_obj['teacher'] = teacher
-                    new_obj['submissions'] = submissions
+            if assignm.teachers == current_user:
+                new_obj = holder_obj
 
         if current_user.__tablename__ == 'students':
-            if current_user.department:
-                if current_user.department == ass_dept and\
-                        assignm.year_of_study == current_user.year_of_study:
-                    for k, v in assignm.to_json().items():
-                        if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
-                                 'year_of_study', 'due_date', 'description', 'link',
-                                 'created_at', 'updated_at']:
-                            new_obj[k] = v
-                    new_obj['course'] = course
-                    new_obj['teacher'] = teacher
-                    new_obj['submissions'] = submissions
+            if current_user.department == ass_dept and\
+                    assignm.year_of_study == current_user.year_of_study:
+                new_obj = holder_obj
 
         return jsonify({"assignment": new_obj}), 200
     else:
@@ -126,26 +100,29 @@ def create_assignments():
     """function that handles creation endpoint for Assignment instance"""
     user = current_user.__tablename__
     data = dict(request.form)
-    data['due_date'] = datetime.strptime(
-        data.get('due_date'), BaseModel.DATE_FORMAT)
 
     # Check if teacher, department or course really exist
     from models.teachers_and_degree import Teacher
     from models.courses_departments import Department
     from models.courses_departments import Course
-    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    teacher = db.get_by_id(Teacher, data.get('teacher_id'))
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
-    dept = db.get_by_id(Department, data['dept_id'])
+    dept = db.get_by_id(Department, data.get('dept_id'))
     if not dept:
         return jsonify(ERROR='Department does not exists'), 404
-    course = db.get_by_id(Course, data['course_id'])
+    course = db.get_by_id(Course, data.get('course_id'))
     if not course:
         return jsonify(ERROR='Course does not exists'), 404
     if user == 'admins' or user == 'teachers':
         try:
+            data['due_date'] = datetime.strptime(
+                data.get('due_date'), BaseModel.DATE_FORMAT)
             # check if it exists
-            find_dept = db.get_by_id(Assignment, data.get('id'))
+            find_dept = db.search(Assignment, id=data.get('id'),
+                                  dept_id=data.get('dept_id'),
+                                  teacher_id=data.get('teacher_id'),
+                                  assign_title=data.get('assign_title'))
             if find_dept:
                 return jsonify(error="Assignment already exist")
             created = db.create_object(Assignment(**data))
@@ -160,36 +137,45 @@ def create_assignments():
 def update_assignment(id):
     """ function that handles update endpoint for Assignment instance"""
     user = current_user.__tablename__
-
-    if user == 'admins' or user == 'teachers':
-        try:
-            data = dict(request.form)
-            # trying to update date
-            if data.get('year_of_study'):
-                data['year_of_study'] = int(data.get('year_of_study'))
-            if data.get('due_date'):
-                data['due_date'] = datetime.strptime(
-                    data.get('due_date'), BaseModel.DATE_FORMAT)
-            updated = db.update(Assignment, id, **data)
-        except Exception as error:
-            return jsonify(ERROR=str(error)), 400
-        return jsonify({"message": "Successfully updated",
-                        "id": updated.id}), 201
-    return jsonify(ERROR='Admins only')
+    if user == 'students':
+        abort(403)
+    if user == 'teachers':
+        assign = db.get_by_id(Assignment, id)
+        if assign.teachers:
+            if assign.teachers != current_user:
+                abort(403)
+    try:
+        data = dict(request.form)
+        # trying to update date
+        if data.get('year_of_study'):
+            data['year_of_study'] = int(data.get('year_of_study'))
+        if data.get('due_date'):
+            data['due_date'] = datetime.strptime(
+                data.get('due_date'), BaseModel.DATE_FORMAT)
+        updated = db.update(Assignment, id, **data)
+    except Exception as error:
+        return jsonify(ERROR=str(error)), 400
+    return jsonify({"message": "Successfully updated",
+                    "id": updated.id}), 201
 
 
 @assignm_blueprint.route('/assignments/<int:id>', methods=['DELETE'], strict_slashes=False)
 def delete_assignment(id):
     """function for delete endpoint, it handles Assignment deletion"""
     user = current_user.__tablename__
+    if user == 'students':
+        return jsonify(ERROR='Admins only'), 403
 
-    if user == 'admins' or user == 'teachers':
-        try:
-            db.delete(Assignment, id)
-        except NoResultFound as e:
-            return jsonify(ERROR=str(e)), 400
-        return jsonify(message="Successfully deleted assignment"), 200
-    return jsonify(ERROR='Admins only')
+    if user == 'teachers':
+        assign = db.get_by_id(Assignment, id)
+        if assign.teachers:
+            if assign.teachers != current_user:
+                abort(403)
+    try:
+        db.delete(Assignment, id)
+    except NoResultFound as e:
+        return jsonify(ERROR=str(e)), 400
+    return jsonify(message="Successfully deleted assignment"), 200
 
 
 # helpers

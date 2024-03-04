@@ -1,7 +1,7 @@
 from models.courses_departments import Course, Department, DepartmentCourse
 from api.v1.views import course_blueprint
 from api.engine import db
-from flask import flash, jsonify, redirect, request, url_for
+from flask import abort, flash, jsonify, redirect, request, url_for
 from datetime import date, datetime
 from models.base_model import BaseModel
 from sqlalchemy.exc import NoResultFound
@@ -12,132 +12,112 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @course_blueprint.route('/courses', methods=['GET'], strict_slashes=False)
+@login_required
 def courses():
     """returns all courses objects from the db"""
     new_obj = {}
     all_courses = []
     courses = db.get_all_object(Course)
-    try:
-        for course in courses:
-            departments = [
-                f'{BASE_URL}/departments/{depts.dept_code}'
-                for depts in course.departments if course.departments]
-            materials = [
-                f'{BASE_URL}/materials/{material.id}'
-                for material in course.materials if course.materials]
-            teachers = [
-                f'{BASE_URL}/teachers/{teacher.id}'
-                for teacher in course.teachers if course.teachers]
-            # assignments = [f'{BASE_URL}/assignments/{assign.id}'
-            # for assign in course.assignments] yet to be implemented
-            creator = f'{BASE_URL}/admins/{course.creator.id}' if course.creator else None
+    for course in courses:
+        departments = [
+            f'{BASE_URL}/departments/{depts.dept_code}'
+            for depts in course.departments if course.departments]
+        materials = [
+            f'{BASE_URL}/materials/{material.id}'
+            for material in course.materials if course.materials]
+        teachers = [
+            f'{BASE_URL}/teachers/{teacher.id}'
+            for teacher in course.teachers if course.teachers]
+        # assignments = [f'{BASE_URL}/assignments/{assign.id}'
+        # for assign in course.assignments] yet to be implemented
+        creator = f'{BASE_URL}/admins/{course.creator.id}' if course.creator else None
 
-            for k, v in course.to_json().items():
-                if k in ['course_code', 'year_of_study', 'end_date', 'description',
-                         'created_at', 'course_name', 'credits', 'start_date',
-                         'created_by', 'updated_at']:
-                    new_obj[k] = v
-            new_obj['departments'] = departments
-            new_obj['materials'] = materials
-            new_obj['teachers'] = teachers
-            new_obj['creator'] = creator
-            if current_user.__tablename__ == 'admins':
-                all_courses.append(new_obj)
-            elif current_user.__tablename__ == 'teachers':
-                if current_user.courses:
+        for k, v in course.to_json().items():
+            if k in ['course_code', 'year_of_study', 'end_date', 'description',
+                     'created_at', 'course_name', 'credits', 'start_date',
+                     'created_by', 'updated_at']:
+                new_obj[k] = v
+        new_obj['departments'] = departments
+        new_obj['materials'] = materials
+        new_obj['teachers'] = teachers
+        new_obj['creator'] = creator
+        if current_user.__tablename__ == 'admins':
+            all_courses.append(new_obj)
+        elif current_user.__tablename__ == 'teachers':
+            for tc in course.teachers:
+                if tc == current_user:
                     all_courses.append(new_obj)
-            if current_user.__tablename__ == 'students':
-                if current_user.department:
-                    if current_user.department in course.departments\
-                            and current_user.year_of_study == course.year_of_study:
-                        all_courses.append(new_obj)
-            new_obj = {}
-    except Exception as error:
-        flash(str(error))
-        return redirect(url_for('auth_blueprint.login')), 301
+        if current_user.__tablename__ == 'students':
+            if current_user.department:
+                if current_user.department in course.departments\
+                        and current_user.year_of_study == course.year_of_study:
+                    all_courses.append(new_obj)
+        new_obj = {}
     return jsonify({"courses": all_courses}), 200
 
 
 @course_blueprint.route('/courses/<code>', methods=['GET'], strict_slashes=False)
+@login_required
 def courses_by_code(code):
     """endpoint that handle retrival of course by is code"""
+    holder_obj = {}
     new_obj = {}
     course = db.get_by_id(Course, code)
-    try:
-        if course:
-            departments = [
-                f'{BASE_URL}/departments/{depts.dept_code}'
-                for depts in course.departments if course.departments]
-            materials = [
-                f'{BASE_URL}/materials/{material.id}'
-                for material in course.materials if course.materials]
-            teachers = [
-                f'{BASE_URL}/teachers/{teacher.id}'
-                for teacher in course.teachers if course.teachers]
-            # assignments = [f'{BASE_URL}/assignments/{assign.id}'
-            # for assign in course.assignments] yet to be implemented
-            creator = f'{BASE_URL}/admins/{course.creator.id}' if course.creator else None
+    if course:
+        departments = [
+            f'{BASE_URL}/departments/{depts.dept_code}'
+            for depts in course.departments if course.departments]
+        materials = [
+            f'{BASE_URL}/materials/{material.id}'
+            for material in course.materials if course.materials]
+        teachers = [
+            f'{BASE_URL}/teachers/{teacher.id}'
+            for teacher in course.teachers if course.teachers]
+        # assignments = [f'{BASE_URL}/assignments/{assign.id}'
+        # for assign in course.assignments] yet to be implemented
+        creator = f'{BASE_URL}/admins/{course.creator.id}' if course.creator else None
 
-            # handling url args
-            if request.args:
-                args_dict = dict(request.args)
-                if len(args_dict) > 1:
-                    return jsonify(message="Not implemented")
-                if args_dict.get('score') == 'true':
-                    course_scores = find_course_scores(code)
-                    return jsonify({"scores": {"course": course.course_code,
-                                               "score": course_scores}}), 200
-                elif args_dict.get('departments') == 'true':
-                    dept_with_crs = find_department_with_course(code)
-                    return jsonify({"departments": {"course": course.course_code,
-                                                    "departments": dept_with_crs}}), 200
-                elif args_dict.get('materials') == 'true':
-                    crs_materials = find_crs_materials(code)
-                    return jsonify({"materials": {"course": course.course_code,
-                                                  "materials": crs_materials}}), 200
-                else:
-                    return jsonify(message="Not implemented"), 400
+        # handling url args
+        if request.args:
+            args_dict = dict(request.args)
+            if len(args_dict) > 1:
+                return jsonify(message="Not implemented")
+            if args_dict.get('score') == 'true':
+                course_scores = find_course_scores(code)
+                return jsonify({"scores": {"course": course.course_code,
+                                           "score": course_scores}}), 200
+            elif args_dict.get('departments') == 'true':
+                dept_with_crs = find_department_with_course(code)
+                return jsonify({"departments": {"course": course.course_code,
+                                                "departments": dept_with_crs}}), 200
+            elif args_dict.get('materials') == 'true':
+                crs_materials = find_crs_materials(code)
+                return jsonify({"materials": {"course": course.course_code,
+                                              "materials": crs_materials}}), 200
+            else:
+                return jsonify(message="Not implemented"), 400
 
-            if current_user.__tablename__ == 'admins':
-                """display course based on admin credentials"""
-                for k, v in course.to_json().items():
-                    if k in ['course_code', 'year_of_study', 'end_date', 'description',
-                             'created_at', 'course_name', 'credits', 'start_date',
-                             'created_by', 'updated_at']:
-                        new_obj[k] = v
-                new_obj['departments'] = departments
-                new_obj['materials'] = materials
-                new_obj['teachers'] = teachers
-                new_obj['creator'] = creator
-            if current_user.__tablename__ == 'teachers':
-                if course in current_user.courses:
-                    for k, v in course.to_json().items():
-                        if k in ['course_code', 'year_of_study', 'end_date', 'description',
-                                 'created_at', 'course_name', 'credits', 'start_date',
-                                 'created_by', 'updated_at']:
-                            new_obj[k] = v
-                    new_obj['departments'] = departments
-                    new_obj['materials'] = materials
-                    new_obj['teachers'] = teachers
-                    new_obj['creator'] = creator
-                # return new_obj
-            if current_user.__tablename__ == 'students':
-                if current_user.department:
-                    if current_user.department in course.departments and\
-                            course.year_of_study == current_user.year_of_study:
-                        for k, v in course.to_json().items():
-                            if k in ['course_code', 'year_of_study', 'end_date', 'description',
-                                     'created_at', 'course_name', 'credits', 'start_date',
-                                     'created_by', 'updated_at']:
-                                new_obj[k] = v
-                        new_obj['departments'] = departments
-                        new_obj['materials'] = materials
-                        new_obj['teachers'] = teachers
-                        new_obj['creator'] = creator
+        for k, v in course.to_json().items():
+            if k in ['id', 'teacher_id', 'dept_id', 'year_of_study',
+                     'message', 'created_at', 'updated_at']:
+                holder_obj[k] = v
+        holder_obj['teachers'] = teachers
+        holder_obj['departments'] = departments
+        holder_obj['materials'] = materials
+        holder_obj['creator'] = creator
 
-    except Exception as error:
-        flash("Login and try again")
-        return redirect(url_for('auth_blueprint.login'))
+        if current_user.__tablename__ == 'admins':
+            """display course based on admin credentials"""
+            new_obj = holder_obj
+        if current_user.__tablename__ == 'teachers':
+            for tc in course.teachers:
+                if tc == current_user:
+                    new_obj = holder_obj
+        if current_user.__tablename__ == 'students':
+            if current_user.department:
+                if current_user.department in course.departments and\
+                        course.year_of_study == current_user.year_of_study:
+                    new_obj = holder_obj
     return jsonify({"course": new_obj}), 200
 
 
@@ -146,36 +126,41 @@ def courses_by_code(code):
 def create_course():
     """function that handles creation endpoint for Course instance"""
     data = dict(request.form)
+    user = current_user.__tablename__
 
+    if user != 'admins':
+        abort(403)
     # check creator existence
     from models.roles_and_admins import Admin
     admin = db.get_by_id(Admin, data['created_by'])
     if not admin:
         return jsonify(ERROR='Admin not exists')
+    data['created_by'] = int(current_user.id)
     start_date = data['start_date'].split('-')
     end_date = data['end_date'].split('-')
-    if current_user.__tablename__ == 'admins':
-        try:
-            data['start_date'] = date(int(start_date[0]), int(
-                start_date[1]), int(start_date[2]))
-            data['end_date'] = date(int(end_date[0]), int(
-                end_date[1]), int(end_date[2]))
-            # check if it exists
-            find_couse = db.get_by_id(Course, data['course_code'])
-            if find_couse:
-                return jsonify(error="Course already exist")
-            created = db.create_object(Course(**data))
-        except ValueError as e:
-            return jsonify({"message": "Not created", "error": str(e)}), 400
-        return jsonify({"message": "Successfully updated",
-                        "id": created.course_name}), 201
-    return jsonify(ERROR="You should be admin"), 403
+
+    try:
+        data['start_date'] = date(int(start_date[0]), int(
+            start_date[1]), int(start_date[2]))
+        data['end_date'] = date(int(end_date[0]), int(
+            end_date[1]), int(end_date[2]))
+        # check if it exists
+        find_couse = db.get_by_id(Course, data['course_code'])
+        if find_couse:
+            return jsonify(error="Course already exist")
+        created = db.create_object(Course(**data))
+    except ValueError as e:
+        return jsonify({"message": "Not created", "error": str(e)}), 400
+    flash("created successfully")
+    return jsonify({"message": "Successfully updated",
+                    "id": created.course_name}), 201
 
 
 @course_blueprint.route('/courses/<code>', methods=['PUT'], strict_slashes=False)
 @login_required
 def update_course(code):
     """function that handles update endpoint for Course instance"""
+
     if current_user.__tablename__ == 'admins':
         for role in current_user.roles:
             if not (role.role_name == 'super admin') or (role.role_name == 'editor'):
@@ -183,7 +168,16 @@ def update_course(code):
         try:
             course = db.get_by_id(Course, code)
             if course:
-                data = request.form
+                data = dict(request.form)
+                if data.get('start_date'):
+                    start_date = data['start_date'].split('-')
+                    data['start_date'] = date(int(start_date[0]), int(
+                        start_date[1]), int(start_date[2]))
+                if data.get('end_date'):
+                    end_date = data['end_date'].split('-')
+                    data['end_date'] = date(int(end_date[0]), int(
+                        end_date[1]), int(end_date[2]))
+
                 updated = db.update(Course, code, **data)
                 return jsonify({"message": "Successfully updated",
                                 "id": updated.course_code}), 201
@@ -197,9 +191,11 @@ def update_course(code):
 def delete_course(code):
     """function for delete endpoint, it handles course deletion"""
     if current_user.__tablename__ == 'admins':
+        if len(current_user.roles) < 1:
+            return jsonify(STATURS='No role assigned'), 401
         for role in current_user.roles:
             if not (role.role_name == 'super admin'):
-                return jsonify(ERROR="Admin only"), 403
+                return jsonify(ERROR="Missing privilleges"), 401
         try:
             db.delete(Course, code)
         except NoResultFound as e:

@@ -1,4 +1,5 @@
 from flask_login import current_user
+from models.roles_and_admins import Admin
 from models.teacher_course import TeacherCourse
 from models.courses_departments import Course, Department, DepartmentCourse
 from api.v1.views import course_blueprint
@@ -34,7 +35,6 @@ def teacher_course():
             new_obj['teacher'] = teacher
             new_obj['course'] = course
             all_associations.append(new_obj)
-            print(all_associations)
             new_obj = {}
         return jsonify({"teacher-course associations": all_associations}), 200
     else:
@@ -69,6 +69,8 @@ def single_teacher_course(id):
 @login_required
 def create_teacher_association():
     """create a teacher course association instance"""
+    if not isinstance(current_user, Admin):
+        abort(403)
     data = dict(request.form)
 
     teacher = db.get_by_id(Teacher, data['teacher_id'])
@@ -100,7 +102,7 @@ def create_teacher_association():
 def update_association_object(id):
     """update teacher degree association object"""
 
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
     if data.get('teacher_id'):
@@ -116,6 +118,7 @@ def update_association_object(id):
         assoc = db.search(TeacherCourse, **data)
         if assoc:
             return jsonify(ERROR='Association alredy exists'), 409
+        data['updated_at'] = datetime.utcnow()
         updated = db.update(TeacherCourse, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
@@ -127,7 +130,7 @@ def update_association_object(id):
 @login_required
 def remove_association(id):
     """remove association between degree and teacher"""
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     try:
         db.delete(TeacherCourse, id)
@@ -192,7 +195,7 @@ def single_dept_course(id):
 @login_required
 def create_crs_dept_association():
     """create a department-course association instance"""
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
     dept = db.get_by_id(Department, data['dept_id'])
@@ -221,15 +224,20 @@ def create_crs_dept_association():
 @login_required
 def update_dept_crs(id):
     """update department-course association object"""
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
-    if data.get('date_assigned'):
-        data['date_assigned'] = datetime.strptime(
-            data['date_assigned'], BaseModel.DATE_FORMAT)
+    if data.get('dept_id'):
+        dept = db.get_by_id(Department, data['dept_id'])
+        if not dept:
+            return jsonify(ERROR='Department does not exists'), 404
+    if data.get('course_id'):
+        course = db.get_by_id(Course, data['course_id'])
+        if not course:
+            return jsonify(ERROR='Course does not exists'), 404
+
     try:
-        # NORMALLY, CHECK ROW WITH TEACHER AND DEGREE ID
-        # IF FOUND UPDATE ANY COLUMN
+        data['updated_at'] = datetime.utcnow()
         updated = db.update(DepartmentCourse, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
@@ -241,7 +249,7 @@ def update_dept_crs(id):
 @login_required
 def remove_dept_crs(id):
     """remove association between department-course"""
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     try:
         db.delete(DepartmentCourse, id)

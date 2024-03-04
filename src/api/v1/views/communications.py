@@ -2,20 +2,19 @@ from flask_login import login_required
 from models.communications import Communication
 from api.v1.views import comm_blueprint
 from api.engine import db
-from flask import jsonify, request
+from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
-from models.base_model import BaseModel
-from datetime import datetime
+from flask_login import current_user
 
 
 BASE_URL = 'http://localhost:5000/api/v1'
+user = current_user
 
 
 @comm_blueprint.route('/communications', methods=['GET'], strict_slashes=False)
 @login_required
 def communications():
     """returns all Communication objects from the db"""
-
     new_obj = {}
     all_comms = []
     comms = db.get_all_object(Communication)
@@ -29,7 +28,16 @@ def communications():
                 new_obj[k] = v
         new_obj['teacher'] = teacher
         new_obj['departments'] = departments
-        all_comms.append(new_obj)
+
+        if user == 'admins':
+            all_comms.append(new_obj)
+        if user == 'teachers':
+            if comm.teachers == user:
+                all_comms.append(new_obj)
+        if user == 'students':
+            if comm.year_of_study == user.year_of_study\
+                    and comm.dept_id == user.dept_id:
+                all_comms.append(new_obj)
         new_obj = {}
     return jsonify({"communications": all_comms}), 200
 
@@ -39,23 +47,33 @@ def communications():
 def single_communication(id):
     """ endpoint that handle retrival of department by is code"""
     new_obj = {}
+    holder_obj = {}
     comm = db.get_by_id(Communication, id)
     if comm:
         departments = f'{BASE_URL}/departments/{comm.departments.dept_code}'
         teacher = f'{BASE_URL}/teachers/{comm.teachers.id}'
-
-        for k, v in comm.to_json().items():
-            if k in ['id', 'teacher_id', 'dept_id', 'year_of_study',
-                     'message', 'created_at', 'updated_at']:
-                new_obj[k] = v
-        new_obj['teacher'] = teacher
-        new_obj['submissions'] = departments
 
         # handling url args
         if request.args:
             args_dict = dict(request.args)
             data, status_code = args_handler(comm, args_dict)
             return jsonify(data), status_code
+        for k, v in comm.to_json().items():
+            if k in ['id', 'teacher_id', 'dept_id', 'year_of_study',
+                     'message', 'created_at', 'updated_at']:
+                holder_obj[k] = v
+        holder_obj['teacher'] = teacher
+        holder_obj['submissions'] = departments
+
+        if user == 'admins':
+            new_obj = holder_obj
+        if user == 'teachers':
+            if comm.teachers == user:
+                new_obj = holder_obj
+        if user == 'students':
+            if comm.year_of_study == user.year_of_study\
+                    and comm.dept_id == user.dept_id:
+                new_obj = holder_obj
         return jsonify({"communication": new_obj}), 200
     else:
         return jsonify(ERROR="Not found"), 404
@@ -65,18 +83,24 @@ def single_communication(id):
 @login_required
 def create_communication():
     """function that handles creation endpoint for Communication instance"""
+    if user == 'students':
+        abort(403)
     data = dict(request.form)
     # Check if teacher, department or course really exist
     from models.teachers_and_degree import Teacher
-    from _courses_departments import Department
-    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    from models.courses_departments import Department
+    teacher = db.get_by_id(Teacher, data.get('teacher_id'))
+    data['year_of_study'] = int(data.get('year_of_study'))
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
-    dept = db.get_by_id(Department, data['dept_id'])
+    dept = db.get_by_id(Department, data.get('dept_id'))
     if not dept:
         return jsonify(ERROR='Department does not exists'), 404
-    if data.get('year_of_study'):
-        data['year_of_study'] = int(data.get('year_of_study'))
+
+    # teacher to only depts he/she has right to
+    if user == 'teachers':
+        if dept.teachers != user:
+            abort(403)
     try:
         created = db.create_object(Communication(**data))
     except ValueError as e:
@@ -89,7 +113,12 @@ def create_communication():
 @login_required
 def delete_communication(id):
     """function for delete endpoint, it handles Communication deletion"""
-
+    if user == 'students':
+        abort(403)
+    comm = db.get_by_id(Communication, id)
+    if user == 'teachers':
+        if comm.teachers != user:
+            abort(403)
     try:
         db.delete(Communication, id)
     except NoResultFound as e:

@@ -1,14 +1,16 @@
 from flask_login import current_user
 from models.courses_departments import Department
+from models.roles_and_admins import Admin
 from models.students import Student
 from api.v1.views import students_blueprint
 from api.engine import db
-from flask import abort, jsonify, redirect, request, url_for
+from flask import abort, jsonify, request
 import bcrypt
 from flask_login import login_required
 from sqlalchemy.exc import NoResultFound
-from models.base_model import BaseModel
 from datetime import date
+
+from models.teachers_and_degree import Teacher
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -19,7 +21,7 @@ def students():
     """return all students in the storage"""
     new_obj = {}
     all_students = []
-    if current_user.__tablename__ == 'students':
+    if isinstance(current_user, Student):
         abort(404)
     students = db.get_all_object(Student)
     if students:
@@ -37,9 +39,9 @@ def students():
             new_obj['submissions'] = submissions
             new_obj['scores'] = scores
             new_obj['department'] = department
-            if current_user.__tablename__ == 'admins':
+            if isinstance(current_user, Admin):
                 all_students.append(new_obj)
-            if current_user.__tablename__ == 'teachers':
+            if isinstance(current_user, Teacher):
                 if student.department in current_user.departments:
                     all_students.append(new_obj)
             new_obj = {}
@@ -52,46 +54,31 @@ def students():
 def single_students(regno):
     """return all students in the storage"""
     new_obj = {}
+    holder_old = {}
     student = db.get_by_id(Student, regno)
     if student:
-        # st_reg = student.regno
         department = f'{BASE_URL}/departments/{student.department.dept_code }'
         scores = [score.to_json() for score in student.scores]
         submissions = [subm.to_json() for subm in student.submissions]
 
-        if current_user.__tablename__ == 'admins':
-            for k, v in student.to_json().items():
-                if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
-                         'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
-                         'last_login', 'created_at', 'updated_at']:
-                    new_obj[k] = v
+        for k, v in student.to_json().items():
+            if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
+                     'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
+                     'last_login', 'created_at', 'updated_at']:
+                holder_old[k] = v
 
-            new_obj['submissions'] = submissions
-            new_obj['scores'] = scores
-            new_obj['department'] = department
-        if current_user.__tablename__ == 'teachers':
+        holder_old['submissions'] = submissions
+        holder_old['scores'] = scores
+        holder_old['department'] = department
+        if isinstance(current_user, Admin):
+            new_obj = holder_old
+        if isinstance(current_user, Teacher):
             if current_user.__tablename__ == 'teachers':
                 if student.department in current_user.departments:
-                    for k, v in student.to_json().items():
-                        if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
-                                 'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
-                                 'last_login', 'created_at', 'updated_at']:
-                            new_obj[k] = v
-
-                    new_obj['submissions'] = submissions
-                    new_obj['scores'] = scores
-                    new_obj['department'] = department
-        if current_user.__tablename__ == 'students':
+                    new_obj = holder_old
+        if isinstance(current_user, Student):
             if current_user.regno == student.regno:
-                for k, v in student.to_json().items():
-                    if k in ['regno', 'first_name', 'last_name',  'email', 'tel',
-                             'dob', 'dept_id', 'year_of_study', 'sponsorship', 'citizenship',
-                             'last_login', 'created_at', 'updated_at']:
-                        new_obj[k] = v
-
-                new_obj['submissions'] = submissions
-                new_obj['scores'] = scores
-                new_obj['department'] = department
+                new_obj = holder_old
 
         return jsonify({"students": new_obj}), 200
     return jsonify(message="Nothing found"), 404
@@ -101,6 +88,8 @@ def single_students(regno):
                           strict_slashes=False)
 def create_student():
     """function that handles creation endpoint for Student instance"""
+    if isinstance(current_user, Teacher):
+        abort(403)
     data = dict(request.get_json())
     dept = db.get_by_id(Department, data['dept_id'])
     if not dept:
@@ -126,10 +115,16 @@ def create_student():
 
 @students_blueprint.route('/students/<int:regno>', methods=['PUT'],
                           strict_slashes=False)
+@login_required
 def update_student(regno):
     """ function that handles update endpoint for Student instance"""
+    if isinstance(current_user, Teacher):
+        abort(403)
+    data = dict(request.form)
+    if isinstance(current_user, Student) and data.get('year_of_study') \
+            or data.get('dept_id'):
+        return jsonify(ERROR='You can update year of study, Admins only'), 403
     try:
-        data = dict(request.form)
         updated = db.update(Student, regno, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
@@ -139,10 +134,11 @@ def update_student(regno):
 
 @students_blueprint.route('/students/<int:regno>', methods=['DELETE'],
                           strict_slashes=False)
+@login_required
 def delete_student(regno):
     """function for delete endpoint, it handles Student deletion"""
 
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     try:
         db.delete(Student, regno)

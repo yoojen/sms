@@ -1,12 +1,13 @@
 from flask_login import current_user, login_required
+from models.roles_and_admins import Admin
+from models.students import Student
 from models.teachers_and_degree import (Degree,
                                         TeacherDegree, Teacher)
 from api.v1.views import degree_bp
 from api.engine import db
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
-from models.base_model import BaseModel
-from datetime import datetime
+
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -17,6 +18,8 @@ def get_degrees():
     """return all Degree instance from the storage"""
     new_obj = {}
     all_degrees = []
+    if isinstance(current_user, Student):
+        abort(404)
     degrees = db.get_all_object(Degree)
     if degrees:
         for degree in degrees:
@@ -28,15 +31,15 @@ def get_degrees():
                     new_obj[k] = v
 
             new_obj['teachers'] = teachers
-            if current_user.__tablename__ == 'admins':
+            if isinstance(current_user, Admin):
                 all_degrees.append(new_obj)
 
-            if current_user.__tablename__ == 'teachers':
+            if isinstance(current_user, Teacher):
                 if current_user in degree.teachers:
                     all_degrees.append(new_obj)
             new_obj = {}
         return jsonify({"degrees": all_degrees}), 200
-    return jsonify(message="Nothing found"), 200
+    return jsonify(MESSAGE="Nothing found"), 200
 
 
 @degree_bp.route('/degrees/<int:id>', methods=['GET'],
@@ -45,17 +48,18 @@ def get_degrees():
 def single_degree(id):
     """return single Degree instance from the storage"""
     new_obj = {}
+    if isinstance(current_user, Student):
+        abort(404)
     degree = db.get_by_id(Degree, id)
     if degree:
-
-        if current_user.__tablename__ == 'admins':
+        if isinstance(current_user, Admin):
             teachers = [f'{BASE_URL}/teachers/{teacher.id }'
                         for teacher in degree.teachers]
             for k, v in degree.to_json().items():
                 if k in ['id', 'degree_name', 'created_at', 'updated_at']:
                     new_obj[k] = v
                     new_obj['teachers'] = teachers
-        if current_user.__tablename__ == 'teachers':
+        if isinstance(current_user, Teacher):
             if degree in current_user.degrees:
                 for k, v in degree.to_json().items():
                     if k in ['id', 'degree_name', 'created_at', 'updated_at']:
@@ -69,13 +73,16 @@ def single_degree(id):
 @login_required
 def create_degree():
     """function that handles creation endpoint for Degree instance"""
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
+    find_dg = db.search(Degree, degree_name=data.get('degree_name'))
+    if find_dg:
+        return jsonify(ERROR='Alredy exists'), 409
     try:
         # check if it exists
         created = db.create_object(Degree(**data))
-    except Exception as e:
+    except ValueError as e:
         db._session.rollback()
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
@@ -168,7 +175,7 @@ def single_teacher_degree(id):
 @login_required
 def create_teacherdegree_association():
     """create a teacher degree association instance"""
-    if current_user.__tablename__ == 'students':
+    if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
     data['teacher_id'] = int(data.get('teacher_id'))
@@ -176,7 +183,7 @@ def create_teacherdegree_association():
     teacher = db.get_by_id(Teacher, data['teacher_id'])
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
-    degree = db.get_by_id(Degree, data['degree_id'])
+    degree = db.get_by_id(Degree, int(data['degree_id']))
     if not degree:
         return jsonify(ERROR='Degree does not exists'), 404
     try:
@@ -195,16 +202,20 @@ def create_teacherdegree_association():
 @login_required
 def update_association_object(id):
     """update teacher degree association object"""
-    if current_user.__tablename__ == 'students':
+    if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
     if data.get('teacher_id'):
         data['teacher_id'] = int(data['teacher_id'])
+        teacher = db.get_by_id(Teacher, data['teacher_id'])
+        if not teacher:
+            return jsonify(ERROR='Teacher does not exists'), 404
     if data.get('degree_id'):
         data['degree_id'] = int(data['degree_id'])
+        degree = db.get_by_id(Degree, int(data['degree_id']))
+        if not degree:
+            return jsonify(ERROR='Degree does not exists'), 404
     try:
-        # NORMALLY, CHECK ROW WITH TEACHER AND DEGREE ID
-        # IF FOUND UPDATE ANY COLUMN
         updated = db.update(TeacherDegree, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
@@ -216,7 +227,7 @@ def update_association_object(id):
 @login_required
 def remove_association(id):
     """remove association between degree and teacher"""
-    if current_user.__tablename__ != 'admins':
+    if not isinstance(current_user, Admin):
         abort(403)
     try:
         db.delete(TeacherDegree, id)

@@ -1,6 +1,7 @@
 from api.v1.authorize import find_dept, is_teacher
 from models.assignments import Assignment
 from models.courses_departments import Course, Department
+from models.roles_and_admins import Admin
 from models.students import Student
 from models.submissions import Submission
 from api.v1.views import submission_bp
@@ -21,9 +22,6 @@ def submissions():
     new_obj = {}
     all_submissions = []
     subms = db.get_all_object(Submission)
-    if current_user.__tablename__ == 'students':
-        # ass_tchr = current_user
-        usr_dept = current_user.department
     if subms:
         for subm in subms:
             assignment = subm.assignment.to_json()
@@ -36,26 +34,17 @@ def submissions():
                     new_obj[k] = v
 
             if student.get('password'):
-                del student['password']
-            if student.get('assignment'):
-                del student['assignment']
-            if student.get('department'):
-                del student['department']
+                student['password'] = "***"
             new_obj['student'] = student
             new_obj['assignment'] = assignment
 
-            if current_user.__tablename__ == 'admins':
+            if isinstance(current_user, Admin):
                 all_submissions.append(new_obj)
-            if current_user.__tablename__ == 'teachers':
-                tch_dept = is_teacher(current_user.id)
-                dept = find_dept(subm.dept_id)
-                if dept in tch_dept:
-                    new_obj['department'] = dept.to_json().get('dept_code')
+            if isinstance(current_user, Teacher):
+                if subm.assignment.teacher_id == current_user.id:
                     all_submissions.append(new_obj)
-            if current_user.__tablename__ == 'students':
-                dept = find_dept(subm.dept_id)
-                if usr_dept == dept \
-                        and subm.student_id == current_user.regno:
+            if isinstance(current_user, Student):
+                if subm.student_id == current_user.regno:
                     all_submissions.append(new_obj)
             new_obj = {}
         return jsonify({"submissions": all_submissions}), 200
@@ -66,55 +55,34 @@ def submissions():
 @login_required
 def single_submission(id):
     """return single submission in the storage"""
-    # IT WILL HANDLE FILE DOWNLOAD
+    holder_old = {}
     new_obj = {}
     subm = db.get_by_id(Submission, id)
     if subm:
-        if current_user.__tablename__ == 'students':
-            usr_dept = current_user.department
         assignment = subm.assignment.to_json()
         student = subm.student.to_json()
 
         if student.get('password'):
-            del student['password']
-        if student.get('assignment'):
-            del student['assignment']
-        if student.get('department'):
-            del student['department']
-        new_obj['student'] = student
-        new_obj['assignment'] = assignment
+            student['password'] = "***"
+        holder_old['student'] = student
+        holder_old['assignment'] = assignment
 
+        for k, v in subm.to_json().items():
+            if k in ['id', 'course_code', 'dept_id',  'student_id',
+                     'assign_id', 'file_path', 'year_of_study',
+                     'created_at', 'updated_at']:
+                holder_old[k] = v
+
+        holder_old['student'] = student
+        holder_old['assignment'] = assignment
         if current_user.__tablename__ == 'admins':
-            for k, v in subm.to_json().items():
-                if k in ['id', 'course_code', 'dept_id',  'student_id',
-                         'assign_id', 'file_path', 'year_of_study',
-                         'created_at', 'updated_at']:
-                    new_obj[k] = v
-
-            new_obj['student'] = student
-            new_obj['assignment'] = assignment
-        if current_user.__tablename__ == 'teachers':
-            tch_dept = is_teacher(current_user.id)
-            if subm.department in tch_dept:
-                for k, v in subm.to_json().items():
-                    if k in ['id', 'course_code', 'dept_id',  'student_id',
-                             'assign_id', 'file_path', 'year_of_study',
-                             'created_at', 'updated_at']:
-                        new_obj[k] = v
-
-                new_obj['student'] = student
-                new_obj['assignment'] = assignment
-        if current_user.__tablename__ == 'students':
-            if usr_dept == subm.department \
-                    and subm.student_id == current_user.regno:
-                for k, v in subm.to_json().items():
-                    if k in ['id', 'course_code', 'dept_id',  'student_id',
-                             'assign_id', 'file_path', 'year_of_study',
-                             'created_at', 'updated_at']:
-                        new_obj[k] = v
-
-        new_obj['student'] = student
-        new_obj['assignment'] = assignment
+            new_obj = holder_old
+        if isinstance(current_user, Teacher):
+            if subm.dept_id in current_user.dept_id:
+                new_obj = holder_old
+        if isinstance(current_user, Student):
+            if subm.student_id == current_user.regno:
+                new_obj = holder_old
 
         return jsonify({"student": new_obj}), 200
     return jsonify(message="Nothing found"), 200
@@ -125,7 +93,7 @@ def single_submission(id):
 @login_required
 def create_submission():
     """function that handles creation endpoint for Submission instance"""
-    if current_user.__tablename__ != 'students':
+    if isinstance(current_user, Teacher):
         abort(403)
     data = dict(request.form)
     assgn = db.get_by_id(Assignment, int(data['assign_id']))
@@ -142,6 +110,10 @@ def create_submission():
     if not course:
         return jsonify(ERROR='Course not exists')
     try:
+        if isinstance(current_user, Student):
+            data['year_of_study'] = current_user.year_of_study
+            data['student_id'] = current_user.regno
+            data['dept_id'] = current_user.dept_id
         # check if it exists
         find_subm = db.search(Submission, course_code=data['course_code'],
                               dept_id=data['dept_id'], student_id=int(
@@ -161,7 +133,7 @@ def create_submission():
 @login_required
 def delete_submission(id):
     """function for delete endpoint, it handles Submission deletion"""
-    if current_user.__tablename__ == 'students':
+    if not isinstance(current_user, Admin):
         abort(403)
     try:
         db.delete(Submission, id)
