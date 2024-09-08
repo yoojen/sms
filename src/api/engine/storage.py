@@ -144,6 +144,11 @@ class DB:
         else:
             return []
 
+    def get_by_email(self, cls, **kwargs):
+        """Search items and return one of them"""
+        obj = self._session.query(cls).filter_by(**kwargs).first()
+        return obj
+    
     def close(self):
         '''
             Remove private session attribute

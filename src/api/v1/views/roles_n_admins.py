@@ -188,11 +188,11 @@ def create_admin():
     if not 'super admin' in admin_roles:
         abort(403)
     data = dict(request.form)
-    dob = data['dob'].split('-')
-    password_bytes = data.get('password').encode()
-    hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
-    data['password'] = hashed_password
     try:
+        dob = data['dob'].split('-')
+        password_bytes = data.get('password').encode()
+        hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+        data['password'] = hashed_password
         # check if it exists
         data['dob'] = date(int(dob[0]), int(dob[1]), int(dob[2]))
         admin = db.get_by_id(Admin, data.get('id'))

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="../static/styles/styles.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}" />
     <title>Login</title>
   </head>
   <body>
@@ -13,10 +13,10 @@
       {% endfor %} {%endif%}
       <h1>Login</h1>
       <label for="email">Email</label>
-      <input type="email" name="email" id="" required />
+      <input type="email" name="email" id="id_email" required />
       <div class="email error"></div>
       <label for="password">Password</label>
-      <input type="password" name="password" id="" required />
+      <input type="password" name="password" id="id_password" required />
       <div class="password error"></div>
       <button type="submit">Login</button>
     </form>
@@ -37,7 +37,7 @@
         const password = form.password.value;
 
         try {
-          const result = await fetch('http://localhost:5000/login', {
+          const result = await fetch('http://localhost:5000/api/v1/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),
             headers: { 'Content-Type': 'application/json' },
@@ -49,9 +49,9 @@
             emailError.textContent = data.errors.email;
             passwordError.textContent = data.errors.password;
           }
-          if (data.msg) {
+          if (data.isLogged) {
             alert('No error');
-            location.assign('/index');
+            //location.assign('/api/v1/index');
           }
         } catch (err) {}
       });

@@ -22,7 +22,6 @@
 
       .main-section {
         width: 75%;
-        /* height: 100vh; */
       }
       .navigations ul {
         display: flex;
@@ -50,6 +49,10 @@
         border: none;
         color: white;
       }
+      img{
+        object-fit: cover;
+        width: 100%;
+      }
     </style>
   </head>
   <body>
@@ -58,10 +61,9 @@
         <section class="person">
           <div class="logo">
             <img
-              src="../static/images/LOGO.png"
+              src="{{ url_for ('static', filename='images/school-card.png')}}"
               alt=""
-              width="230px"
-              height="150px"
+              width="253"
             />
           </div>
           {% if user %}
@@ -81,15 +83,7 @@
           class="logout"
           style="position: absolute; bottom: 10px; width: 20%"
         >
-          <button
-            style="
-              width: 100%;
-              cursor: pointer;
-              padding: 5px 0;
-              font-size: 15px;
-            "
-            onclick="logout()"
-          >
+          <button onclick="logout()">
             Log out
           </button>
         </section>
@@ -99,12 +93,12 @@
     <script>
       async function logout() {
         try {
-          const result = await fetch('http://localhost:5000/logout');
+          const result = await fetch('http://localhost:5000/api/v1/logout');
 
           const data = await result.json();
           console.log(data);
           if (data.message) {
-            location.assign('/login');
+            location.assign('/api/v1/login');
           }
         } catch (err) {}
       }

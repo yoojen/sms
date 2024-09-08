@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 from flask_login import LoginManager, login_required
+from flask_cors import CORS
 from api.engine import db
 from api.v1.views import (course_blueprint,
                           dept_blueprint,
@@ -17,12 +18,23 @@ from api.v1.views import (course_blueprint,
 HOST = '127.0.0.1'
 PORT = 5000
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'not secret'
+app.config['SECRET_KEY'] = 'randomly generated code'
+# Default is 'session'
+app.config['SESSION_COOKIE_NAME'] = 'lg-id'
+# Ensures cookies are not accessible via JavaScript
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+# Set to True in production to enforce HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False
+
+# apply CORS
+CORS(app, resources={r"/api/v1/*": {"origins": "*"}})
+
 course_blueprint.route = login_required(
     course_blueprint.route)  # Wrap the route decorator
 login_manager = LoginManager()
 login_manager.login_view = 'auth_blueprint.login'
 login_manager.init_app(app)
+
 
 app.register_blueprint(auth_blueprint)
 app.register_blueprint(course_blueprint)
@@ -78,8 +90,7 @@ def forbiden_handler(error):
 def unauthorized_handler(error):
     """Unauthorized handler"""
     return jsonify({"error": "Unauthorized"}), 403
-# from flask_login import login_required
-# g.login_required = login
+
 
 
 if __name__ == "__main__":
