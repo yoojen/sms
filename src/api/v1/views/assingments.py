@@ -1,4 +1,6 @@
-from flask_login import current_user, login_required
+# from flask_login import current_user, login_required
+from flask_jwt_extended import (
+    current_user, jwt_required)
 from models.assignments import Assignment
 from api.v1.views import assignm_blueprint
 from api.engine import db
@@ -6,13 +8,19 @@ from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound, IntegrityError
 from models.base_model import BaseModel
 from datetime import datetime
+from flask_jwt_extended import (
+    create_access_token,
+    set_access_cookies,
+    current_user, jwt_required,
+    get_jwt_identity)
+
 
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @assignm_blueprint.route('/assignments', methods=['GET'], strict_slashes=False)
-@login_required
+@jwt_required()
 def assignments():
     """returns all Assignments objects from the db"""
     new_obj = {}
@@ -49,7 +57,7 @@ def assignments():
 
 
 @assignm_blueprint.route('/assignments/<int:id>', methods=['GET'], strict_slashes=False)
-@login_required
+@jwt_required(optional=True)
 def one_assignment(id):
     """ endpoint that handle retrival of department by is code"""
     new_obj = {}
@@ -95,7 +103,7 @@ def one_assignment(id):
 
 
 @assignm_blueprint.route('/assignments/', methods=['POST'], strict_slashes=False)
-@login_required
+@jwt_required(optional=True)
 def create_assignments():
     """function that handles creation endpoint for Assignment instance"""
     user = current_user.__tablename__
@@ -134,6 +142,7 @@ def create_assignments():
 
 
 @assignm_blueprint.route('/assignments/<int:id>', methods=['PUT'], strict_slashes=False)
+@jwt_required(optional=True)
 def update_assignment(id):
     """ function that handles update endpoint for Assignment instance"""
     user = current_user.__tablename__
@@ -160,6 +169,7 @@ def update_assignment(id):
 
 
 @assignm_blueprint.route('/assignments/<int:id>', methods=['DELETE'], strict_slashes=False)
+@jwt_required(optional=True)
 def delete_assignment(id):
     """function for delete endpoint, it handles Assignment deletion"""
     user = current_user.__tablename__

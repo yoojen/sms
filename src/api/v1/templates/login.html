@@ -44,7 +44,7 @@
           });
 
           const data = await result.json();
-          console.log(data);
+          console.log(data)
           if (data.errors) {
             emailError.textContent = data.errors.email;
             passwordError.textContent = data.errors.password;

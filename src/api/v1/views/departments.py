@@ -17,7 +17,6 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @dept_blueprint.route('/departments', methods=['GET'], strict_slashes=False)
-@login_required
 def departments():
     """returns all deparments objects from the db"""
 
@@ -68,6 +67,8 @@ def departments():
         if isinstance(current_user, Student):
             if current_user.dept_id == dept.dept_code:
                 all_depts.append(new_obj)
+        if current_user.__class__.__name__ == 'AnonymousUserMixin':
+            all_depts.append(new_obj)
         new_obj = {}
     return jsonify({"departments": all_depts}), 200
 

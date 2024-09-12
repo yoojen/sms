@@ -1,3 +1,4 @@
+import sqlite3
 from flask_login import current_user
 from models.courses_departments import Department
 from models.roles_and_admins import Admin
@@ -16,13 +17,13 @@ BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @students_blueprint.route('/students', methods=['GET'], strict_slashes=False)
-@login_required
+# @login_required
 def students():
     """return all students in the storage"""
     new_obj = {}
     all_students = []
-    if isinstance(current_user, Student):
-        abort(404)
+    # if isinstance(current_user, Student):
+    #     abort(404)
     students = db.get_all_object(Student)
     if students:
         for student in students:
@@ -88,19 +89,16 @@ def single_students(regno):
                           strict_slashes=False)
 def create_student():
     """function that handles creation endpoint for Student instance"""
-    if isinstance(current_user, Teacher):
-        abort(403)
     data = dict(request.get_json())
-    dept = db.get_by_id(Department, data['dept_id'])
-    if not dept:
-        return jsonify(ERROR='Department not exists'), 404
-
-    password_bytes = data.get('password').encode()
-    hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
-    data['password'] = hashed_password
-    dob = data['dob'].split('-')
-
     try:
+        dept = db.get_by_id(Department, data['dept_id'])
+        if not dept:
+            return jsonify({"error": "Check Dept id"}), 400
+
+        password_bytes = data.get('password').encode()
+        hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+        data['password'] = hashed_password
+        dob = data['dob'].split('-')
         # check if it exists
         data['dob'] = date(int(dob[0]), int(dob[1]), int(dob[2]))
         find_Score = db.get_by_id(Student, data.get('regno'))
@@ -108,7 +106,10 @@ def create_student():
             return jsonify(error="Student already exist"), 409
         created = db.create_object(Student(**data))
     except Exception as e:
-        return jsonify({"message": "Not created", "error": str(e)}), 400
+        if "(sqlite3.IntegrityError)" in str(e):
+            field = str(e).split('[')[0].split(" ")[-1].split(".")[-1][:-1]
+            return jsonify({"error": f"{field} already registered"}), 400
+        return jsonify({"error": str(e)}), 400
     return jsonify({"message": "Successfully created",
                     "email": created.email}), 201
 

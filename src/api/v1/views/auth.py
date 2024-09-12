@@ -1,10 +1,11 @@
 from api.engine import db
 from api.v1.views import auth_blueprint
-from flask import get_flashed_messages, jsonify, redirect, render_template, request, session, url_for
+from flask import get_flashed_messages, jsonify, render_template, request, make_response
 import bcrypt
 from models.roles_and_admins import Admin
 from models.students import Student
 from flask_login import login_user, current_user, login_required, logout_user
+from flask_jwt_extended import create_access_token, set_access_cookies, current_user, jwt_required, get_jwt_identity
 
 from models.teachers_and_degree import Teacher
 
@@ -25,6 +26,7 @@ def login():
 
 
 @auth_blueprint.route('/login', methods=['POST'])
+# @jwt_required(optional=True)
 def post_login():
     data = dict(request.get_json())
     email = data['email']
@@ -32,13 +34,16 @@ def post_login():
     user = teacher  if teacher else None
     user = db.get_by_email(Student, email=email) if not user else user
     user = db.get_by_email(Admin, email=email) if not user else user
+    # print(current_user)
     try:
         if user:
             if not bcrypt.checkpw(data['password'].encode(), user.password):
-                return jsonify(ERROR='Not valid password'), 400
-            isLogged = login_user(user, remember=True)
-            return {'msg': 'logged in', "isLogged": isLogged}
-        return jsonify({"message": "User is not registered"})
+                return jsonify(error='Not valid password'), 400
+            response = make_response(jsonify({'msg': 'logged in', "isLogged": True}), 200)
+            access_token = create_access_token(identity=user)
+            set_access_cookies(response, access_token)
+            return response
+        return jsonify({"error": "User is not registered"}), 400
        
     except Exception as e:
         return jsonify({"error": str(e)}), 400
