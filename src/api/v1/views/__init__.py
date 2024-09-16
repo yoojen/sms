@@ -1,6 +1,4 @@
 from flask import Blueprint
-from flask.ctx import AppContext
-from flask_login import login_required
 
 course_blueprint = Blueprint(
     'course_blueprint', __name__, url_prefix='/api/v1')

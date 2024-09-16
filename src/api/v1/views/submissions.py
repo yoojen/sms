@@ -1,16 +1,13 @@
 from api.v1.authorize import find_dept, is_teacher
-from models.assignments import Assignment
-from models.courses_departments import Course, Department
-from models.roles_and_admins import Admin
-from models.students import Student
-from models.submissions import Submission
+from models.models import (
+        Assignment, Course, Department, Admin,
+        Student, Submission, Teacher
+    )
 from api.v1.views import submission_bp
-from api.engine import db
+from api.engine import db_controller
 from flask_login import current_user, login_required
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
-from models.base_model import BaseModel
-from models.teachers_and_degree import Teacher
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -21,7 +18,7 @@ def submissions():
     """return all submissions in the storage"""
     new_obj = {}
     all_submissions = []
-    subms = db.get_all_object(Submission)
+    subms = db_controller.get_all_object(Submission)
     if subms:
         for subm in subms:
             assignment = subm.assignment.to_json()
@@ -57,7 +54,7 @@ def single_submission(id):
     """return single submission in the storage"""
     holder_old = {}
     new_obj = {}
-    subm = db.get_by_id(Submission, id)
+    subm = db_controller.get_by_id(Submission, id)
     if subm:
         assignment = subm.assignment.to_json()
         student = subm.student.to_json()
@@ -96,10 +93,10 @@ def create_submission():
     if isinstance(current_user, Teacher):
         abort(403)
     data = dict(request.form)
-    assgn = db.get_by_id(Assignment, int(data['assign_id']))
-    student = db.get_by_id(Student, int(data['student_id']))
-    dept = db.get_by_id(Department, data['dept_id'])
-    course = db.get_by_id(Course, data['course_code'])
+    assgn = db_controller.get_by_id(Assignment, int(data['assign_id']))
+    student = db_controller.get_by_id(Student, int(data['student_id']))
+    dept = db_controller.get_by_id(Department, data['dept_id'])
+    course = db_controller.get_by_id(Course, data['course_code'])
 
     if not assgn:
         return jsonify(ERROR='Assignment not exists')
@@ -115,13 +112,13 @@ def create_submission():
             data['student_id'] = current_user.regno
             data['dept_id'] = current_user.dept_id
         # check if it exists
-        find_subm = db.search(Submission, course_code=data['course_code'],
+        find_subm = db_controller.search(Submission, course_code=data['course_code'],
                               dept_id=data['dept_id'], student_id=int(
                                   current_user.regno),
                               assign_id=int(data['assign_id']))
         if find_subm:
             return jsonify(error="Submitted already"), 409
-        created = db.create_object(Submission(**data))
+        created = db_controller.create_object(Submission(**data))
     except ValueError as e:
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
@@ -136,7 +133,7 @@ def delete_submission(id):
     if not isinstance(current_user, Admin):
         abort(403)
     try:
-        db.delete(Submission, id)
+        db_controller.delete(Submission, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted"), 200

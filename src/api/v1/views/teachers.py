@@ -1,24 +1,25 @@
-from models.roles_and_admins import Admin
-from models.teachers_and_degree import Teacher
+from models.models import Admin, Teacher
 from api.v1.views import teacher_bp
-from api.engine import db
+from api.engine import db_controller
 import bcrypt
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound, PendingRollbackError
 from datetime import date
 from flask_login import current_user, login_required
+from flask_jwt_extended import current_user, jwt_required
+
 BASE_URL = 'http://localhost:5000/api/v1'
 
 
 @teacher_bp.route('/teachers', methods=['GET'], strict_slashes=False)
-@login_required
+# @login_required
 def teachers():
     """return all Teacher instance from the storage"""
     if current_user.__tablename__ == 'students':
         abort(403)
     new_obj = {}
     all_teachers = []
-    teachers = db.get_all_object(Teacher)
+    teachers = db_controller.get_all_object(Teacher)
     if teachers:
         for tchr in teachers:
             department = [
@@ -36,7 +37,7 @@ def teachers():
             materials = [
                 f'{BASE_URL}/materials/{material.id }' for material in tchr.materials if tchr.materials]
 
-            for k, v in tchr.to_json().items():
+            for k, v in tchr.to_dict().items():
                 if k in ['id', 'first_name', 'last_name',  'email', 'citizenship', 'tel',
                          'dob', 'staff_member', 'last_login', 'created_at', 'updated_at']:
                     new_obj[k] = v
@@ -60,13 +61,13 @@ def teachers():
 
 
 @teacher_bp.route('/teachers/<int:id>', methods=['GET'], strict_slashes=False)
-@login_required
+@jwt_required()
 def single_teacher(id):
     """return single Teacher instance from the storage"""
-    if current_user.__tablename__ == 'students':
-        abort(403)
+    # if current_user.__tablename__ == 'students':
+    #     abort(403)
     new_obj = {}
-    teacher = db.get_by_id(Teacher, id)
+    teacher = db_controller.get_by_id(Teacher, id)
     if teacher:
         department = [
             f'{BASE_URL}/departments/{dept.dept_code }' for dept in teacher.departments]
@@ -82,7 +83,7 @@ def single_teacher(id):
             f'{BASE_URL}/materials/{material.id }' for material in teacher.materials]
 
         if current_user.__tablename__ == 'admins':
-            for k, v in teacher.to_json().items():
+            for k, v in teacher.to_dict().items():
                 if k in ['id', 'first_name', 'last_name',  'email', 'citizenship', 'tel',
                          'dob', 'staff_member', 'last_login', 'created_at', 'updated_at']:
                     new_obj[k] = v
@@ -95,7 +96,7 @@ def single_teacher(id):
             new_obj['assignments'] = assignments
         if current_user.__tablename__ == 'teachers':
             if teacher.id == current_user.id:
-                for k, v in teacher.to_json().items():
+                for k, v in teacher.to_dict().items():
                     if k in ['id', 'first_name', 'last_name',  'email', 'citizenship', 'tel',
                              'dob', 'staff_member', 'last_login', 'created_at', 'updated_at']:
                         new_obj[k] = v
@@ -130,9 +131,9 @@ def create_teacher():
         hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
         data['password'] = hashed_password
         # check if it exists
-        created = db.create_object(Teacher(**data))
+        created = db_controller.create_object(Teacher(**data))
     except Exception as e:
-        db._session.rollback()
+        db_controller._session.rollback()
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
                     "email": created.email}), 201
@@ -149,7 +150,7 @@ def update_teacher(id):
     if data.get('staff_member'):
         data['staff_member'] = True
     try:
-        updated = db.update(Teacher, id, **data)
+        updated = db_controller.update(Teacher, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -164,7 +165,7 @@ def delete_teacher(id):
     if not isinstance(current_user, Admin):
         abort(403)
     try:
-        db.delete(Teacher, id)
+        db_controller.delete(Teacher, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted a teacher"), 200

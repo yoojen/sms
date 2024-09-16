@@ -1,11 +1,10 @@
 from flask_login import current_user, login_required
-from models.roles_and_admins import Role, Admin, RoleAdmin
+from models.models import Role, Admin, RoleAdmin, BaseModel
 from api.v1.views import roles_n_admin_bp
-from api.engine import db
+from api.engine import db_controller
 import bcrypt
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
-from models.base_model import BaseModel
 from datetime import date, datetime
 
 BASE_URL = 'http://localhost:5000/api/v1'
@@ -19,7 +18,7 @@ def roles():
         abort(403)
     new_obj = {}
     all_roles = []
-    roles = db.get_all_object(Role)
+    roles = db_controller.get_all_object(Role)
     for role in roles:
         admins = [
             f'{BASE_URL}/admins/{admin.id}'
@@ -37,11 +36,11 @@ def roles():
                         strict_slashes=False)
 @login_required
 def one_role(id):
-    """returns single Role object from the db"""
+    """returns single Role object from the db_controller"""
     if not isinstance(current_user, Admin):
         abort(403)
     new_obj = {}
-    role = db.get_by_id(Role, id)
+    role = db_controller.get_by_id(Role, id)
     if role:
         admins = [
             f'{BASE_URL}/admins/{admin.id}'
@@ -71,10 +70,10 @@ def create_role():
         abort(403)
     try:
         # check if it exists
-        role = db.search(Role, role_name=data.get('role_name'))
+        role = db_controller.search(Role, role_name=data.get('role_name'))
         if role:
             return jsonify(error="Role already exist"), 409
-        created = db.create_object(Role(**data))
+        created = db_controller.create_object(Role(**data))
     except ValueError as e:
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
@@ -93,7 +92,7 @@ def update_department(id):
         data['updated_at'] = datetime.utcnow()
         if len(data.get('role_name')) < 5:
             return jsonify(ERROR="role name must be atleast 5 characters"), 400
-        updated = db.update(Role, id, **data)
+        updated = db_controller.update(Role, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -108,7 +107,7 @@ def delete_role(id):
     if not isinstance(current_user, Admin):
         abort(403)
     try:
-        db.delete(Role, id)
+        db_controller.delete(Role, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 404
     return jsonify(message="Successfully deleted role"), 200
@@ -123,7 +122,7 @@ def admins():
         abort(403)
     new_obj = {}
     all_admins = []
-    admins = db.get_all_object(Admin)
+    admins = db_controller.get_all_object(Admin)
     for admin in admins:
         roles = [
             f'{BASE_URL}/roles/{role.id}'
@@ -145,11 +144,11 @@ def admins():
 @roles_n_admin_bp.route('/admins/<int:id>', methods=['GET'], strict_slashes=False)
 @login_required
 def one_admin(id):
-    """returns all Admin objects from the db"""
+    """returns all Admin objects from the db_controller"""
     if not isinstance(current_user, Admin):
         abort(403)
     new_obj = {}
-    admin = db.get_by_id(Admin, id)
+    admin = db_controller.get_by_id(Admin, id)
     if admin:
         roles = [
             f'{BASE_URL}/roles/{role.id}'
@@ -195,10 +194,10 @@ def create_admin():
         data['password'] = hashed_password
         # check if it exists
         data['dob'] = date(int(dob[0]), int(dob[1]), int(dob[2]))
-        admin = db.get_by_id(Admin, data.get('id'))
+        admin = db_controller.get_by_id(Admin, data.get('id'))
         if admin:
             return jsonify(error="Admin already exist"), 409
-        created = db.create_object(Admin(**data))
+        created = db_controller.create_object(Admin(**data))
     except Exception as e:
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
@@ -219,7 +218,7 @@ def update_admin(id):
             data['dob'] = datetime.strptime(data.get('dob'),
                                             BaseModel.DATE_FORMAT)
 
-        updated = db.update(Admin, id, **data)
+        updated = db_controller.update(Admin, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -235,7 +234,7 @@ def delete_admin(id):
     if not 'super admin' in admin_roles:
         abort(403)
     try:
-        db.delete(Admin, id)
+        db_controller.delete(Admin, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 404
     return jsonify(message="Successfully deleted admin"), 204
@@ -250,19 +249,19 @@ def create_adminrole():
     if not 'super admin' in admin_roles:
         abort(403)
     data = dict(request.form)
-    admin = db.get_by_id(Admin, data['admin_id'])
+    admin = db_controller.get_by_id(Admin, data['admin_id'])
     if not admin:
         return jsonify(ERROR='Admin not exists'), 404
-    role = db.get_by_id(Role, data['role_id'])
+    role = db_controller.get_by_id(Role, data['role_id'])
     if not role:
         return jsonify(ERROR='Role not found')
 
-    ad_roles = db.search(RoleAdmin, admin_id=int(data.get(
+    ad_roles = db_controller.search(RoleAdmin, admin_id=int(data.get(
         'admin_id')), role_id=int(data.get('role_id')))
     if ad_roles:
         return jsonify(ERROR='Association exists'), 409
     try:
-        created = db.create_object(RoleAdmin(**data))
+        created = db_controller.create_object(RoleAdmin(**data))
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Created successfully", "id": created.id}), 201
@@ -274,19 +273,19 @@ def put_delete_adminrole(id):
     admin_roles = [role.role_name for role in current_user.roles]
     if not 'super admin' in admin_roles:
         abort(403)
-    admin_role = db.get_by_id(RoleAdmin, id)
+    admin_role = db_controller.get_by_id(RoleAdmin, id)
     data = dict(request.form)
     if admin_role:
         if request.method == 'PUT':
             try:
-                updated = db.update(RoleAdmin, id, **data)
+                updated = db_controller.update(RoleAdmin, id, **data)
             except Exception as error:
                 return jsonify(ERROR=str(error)), 400
             return jsonify({"message": "Successfully updated",
                             "id": updated.id}), 201
         if request.method == 'DELETE':
             try:
-                db.delete(RoleAdmin, id)
+                db_controller.delete(RoleAdmin, id)
             except NoResultFound as e:
                 return jsonify(ERROR=str(e)), 404
             return jsonify(message="Successfully deleted association"), 200

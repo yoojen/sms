@@ -1,12 +1,11 @@
 # from flask_login import current_user, login_required
 from flask_jwt_extended import (
     current_user, jwt_required)
-from models.assignments import Assignment
+from models.models import Assignment, Student, Teacher, Department, Course, BaseModel
 from api.v1.views import assignm_blueprint
-from api.engine import db
+from api.engine import db_controller
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound, IntegrityError
-from models.base_model import BaseModel
 from datetime import datetime
 from flask_jwt_extended import (
     create_access_token,
@@ -25,34 +24,41 @@ def assignments():
     """returns all Assignments objects from the db"""
     new_obj = {}
     all_assignms = []
-    assignms = db.get_all_object(Assignment)
+    # I'll work on different users
+    if isinstance(current_user, Student):
+        assignms = [assign for assign in current_user.department.assignments if assign.year_of_study == current_user.year_of_study]
+    elif isinstance(current_user, Teacher):
+        assignms = current_user.assignments
+    else:
+        assignms = db_controller.get_all_object(Assignment)
     for assignm in assignms:
-        ass_dept = assignm.department
-        course = assignm.course.to_json()
-        teacher = assignm.teachers.to_json()
+        # ass_dept = assignm.department
+        # course = assignm.course.to_dict()
+        # teacher = assignm.teachers.to_dict()
 
-        submissions = [
-            f'{BASE_URL}/submissions/{subm.id}'
-            for subm in assignm.submissions]
+        # submissions = [
+        #     f'{BASE_URL}/submissions/{subm.id}'
+        #     for subm in assignm.submissions]
 
-        for k, v in assignm.to_json().items():
-            if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
-                     'year_of_study', 'due_date', 'description', 'link',
-                     'created_at', 'updated_at']:
-                new_obj[k] = v
-        teacher['password'] = '***'
-        new_obj['teacher'] = teacher
-        new_obj['submissions'] = submissions
-        new_obj['course'] = course
-        if current_user.__tablename__ == 'students':
-            if ass_dept == current_user.department and \
-                    assignm.year_of_study == current_user.year_of_study:
-                all_assignms.append(new_obj)
-        if current_user.__tablename__ == 'admins':
-            all_assignms.append(new_obj)
-        if current_user.__tablename__ == 'teachers':
-            if assignm.teachers == current_user:
-                all_assignms.append(new_obj)
+        # for k, v in assignm.to_dict().items():
+        #     if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
+        #              'year_of_study', 'due_date', 'description', 'link',
+        #              'created_at', 'updated_at']:
+        #         new_obj[k] = v
+        # teacher['password'] = '***'
+        # new_obj['teacher'] = teacher
+        # new_obj['submissions'] = submissions
+        # new_obj['course'] = course
+        # if current_user.__tablename__ == 'students':
+        #     if ass_dept == current_user.department and \
+        #             assignm.year_of_study == current_user.year_of_study:
+        #         all_assignms.append(new_obj)
+        # if current_user.__tablename__ == 'admins':
+        #     all_assignms.append(new_obj)
+        # if current_user.__tablename__ == 'teachers':
+        #     if assignm.teachers == current_user:
+        del assignm.__dict__["_sa_instance_state"]
+        all_assignms.append(assignm.__dict__)
     return jsonify({"assignments": all_assignms}), 200
 
 
@@ -62,11 +68,11 @@ def one_assignment(id):
     """ endpoint that handle retrival of department by is code"""
     new_obj = {}
     holder_obj = {}
-    assignm = db.get_by_id(Assignment, id)
+    assignm = db_controller.get_by_id(Assignment, id)
     if assignm:
         ass_dept = assignm.department
-        course = assignm.course.to_json()
-        teacher = assignm.teachers.to_json()
+        course = assignm.course.to_dict()
+        teacher = assignm.teachers.to_dict()
 
         submissions = [
             f'{BASE_URL}/submissions/{subm.id}'
@@ -77,7 +83,7 @@ def one_assignment(id):
             args_dict = dict(request.args)
             data, status_code = args_handler(assignm, args_dict)
             return jsonify(data), status_code
-        for k, v in assignm.to_json().items():
+        for k, v in assignm.to_dict().items():
             if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
                      'year_of_study', 'due_date', 'description', 'link',
                      'created_at', 'updated_at']:
@@ -109,17 +115,13 @@ def create_assignments():
     user = current_user.__tablename__
     data = dict(request.form)
 
-    # Check if teacher, department or course really exist
-    from models.teachers_and_degree import Teacher
-    from models.courses_departments import Department
-    from models.courses_departments import Course
-    teacher = db.get_by_id(Teacher, data.get('teacher_id'))
+    teacher = db_controller.get_by_id(Teacher, data.get('teacher_id'))
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
-    dept = db.get_by_id(Department, data.get('dept_id'))
+    dept = db_controller.get_by_id(Department, data.get('dept_id'))
     if not dept:
         return jsonify(ERROR='Department does not exists'), 404
-    course = db.get_by_id(Course, data.get('course_id'))
+    course = db_controller.get_by_id(Course, data.get('course_id'))
     if not course:
         return jsonify(ERROR='Course does not exists'), 404
     if user == 'admins' or user == 'teachers':
@@ -127,13 +129,13 @@ def create_assignments():
             data['due_date'] = datetime.strptime(
                 data.get('due_date'), BaseModel.DATE_FORMAT)
             # check if it exists
-            find_dept = db.search(Assignment, id=data.get('id'),
+            find_dept = db_controller.search(Assignment, id=data.get('id'),
                                   dept_id=data.get('dept_id'),
                                   teacher_id=data.get('teacher_id'),
                                   assign_title=data.get('assign_title'))
             if find_dept:
                 return jsonify(error="Assignment already exist")
-            created = db.create_object(Assignment(**data))
+            created = db_controller.create_object(Assignment(**data))
         except Exception as e:
             return jsonify({"message": "Not created", "error": str(e)}), 400
         return jsonify({"message": "Successfully created",
@@ -149,7 +151,7 @@ def update_assignment(id):
     if user == 'students':
         abort(403)
     if user == 'teachers':
-        assign = db.get_by_id(Assignment, id)
+        assign = db_controller.get_by_id(Assignment, id)
         if assign.teachers:
             if assign.teachers != current_user:
                 abort(403)
@@ -161,7 +163,7 @@ def update_assignment(id):
         if data.get('due_date'):
             data['due_date'] = datetime.strptime(
                 data.get('due_date'), BaseModel.DATE_FORMAT)
-        updated = db.update(Assignment, id, **data)
+        updated = db_controller.update(Assignment, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -177,12 +179,12 @@ def delete_assignment(id):
         return jsonify(ERROR='Admins only'), 403
 
     if user == 'teachers':
-        assign = db.get_by_id(Assignment, id)
+        assign = db_controller.get_by_id(Assignment, id)
         if assign.teachers:
             if assign.teachers != current_user:
                 abort(403)
     try:
-        db.delete(Assignment, id)
+        db_controller.delete(Assignment, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted assignment"), 200
@@ -194,13 +196,13 @@ def find_assignm_submissions(assignment):
     all_submissions = []
     subms = assignment.submissions
     for sub in subms:
-        all_submissions.append(sub.to_json())
+        all_submissions.append(sub.to_dict())
     return all_submissions
 
 
 def find_assingm_teachers(assignm):
     """find course that are associated with the department"""
-    return assignm.teachers.to_json()
+    return assignm.teachers.to_dict()
 
 
 def args_handler(assignment, args):

@@ -1,15 +1,14 @@
 from flask_login import current_user
-from models.roles_and_admins import Admin
-from models.teacher_course import TeacherCourse
-from models.courses_departments import Course, Department, DepartmentCourse
+from models.models import (
+    Course, Department, DepartmentCourse, BaseModel,
+    Teacher, TeacherCourse, Admin
+)
 from api.v1.views import course_blueprint
-from api.engine import db
+from api.engine import db_controller
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
-from models.base_model import BaseModel
 from datetime import datetime
 from flask_login import login_required
-from models.teachers_and_degree import Teacher
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -20,7 +19,7 @@ def teacher_course():
     """return all teacher and courses associations"""
     new_obj = {}
     all_associations = []
-    tchr_dept_associations = db.get_all_object(TeacherCourse)
+    tchr_dept_associations = db_controller.get_all_object(TeacherCourse)
     if tchr_dept_associations:
         for td in tchr_dept_associations:
             teacher = [
@@ -47,7 +46,7 @@ def teacher_course():
 def single_teacher_course(id):
     """return a teacher degree association based on teacher id"""
     new_obj = {}
-    td = db.get_by_id(TeacherCourse, id)
+    td = db_controller.get_by_id(TeacherCourse, id)
     if td:
         teacher = [
             td.teacher.to_json() if td.teacher else None]
@@ -73,11 +72,11 @@ def create_teacher_association():
         abort(403)
     data = dict(request.form)
 
-    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    teacher = db_controller.get_by_id(Teacher, data['teacher_id'])
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
 
-    course = db.get_by_id(Course, data['course_code'])
+    course = db_controller.get_by_id(Course, data['course_code'])
     if not course:
         return jsonify(ERROR='Course does not exists'), 404
 
@@ -87,12 +86,12 @@ def create_teacher_association():
     data['teacher_id'] = int(data.get('teacher_id'))
     try:
         # check if it exists
-        assoc = db.search(TeacherCourse, **data)
+        assoc = db_controller.search(TeacherCourse, **data)
         if assoc:
             return jsonify(ERROR='Association alredy exists'), 409
-        created = db.create_object(TeacherCourse(**data))
+        created = db_controller.create_object(TeacherCourse(**data))
     except Exception as e:
-        db._session.rollback()
+        db_controller._session.rollback()
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created", "id": created.id}), 201
 
@@ -108,18 +107,18 @@ def update_association_object(id):
     if data.get('teacher_id'):
         data['teacher_id'] = int(data['teacher_id'])
 
-    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    teacher = db_controller.get_by_id(Teacher, data['teacher_id'])
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
-    crs = db.get_by_id(Department, data['course_code'])
+    crs = db_controller.get_by_id(Department, data['course_code'])
     if not crs:
         return jsonify(ERROR='Course does not exists'), 404
     try:
-        assoc = db.search(TeacherCourse, **data)
+        assoc = db_controller.search(TeacherCourse, **data)
         if assoc:
             return jsonify(ERROR='Association alredy exists'), 409
         data['updated_at'] = datetime.utcnow()
-        updated = db.update(TeacherCourse, id, **data)
+        updated = db_controller.update(TeacherCourse, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -133,7 +132,7 @@ def remove_association(id):
     if not isinstance(current_user, Admin):
         abort(403)
     try:
-        db.delete(TeacherCourse, id)
+        db_controller.delete(TeacherCourse, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted an association"), 200
@@ -146,7 +145,7 @@ def dept_course():
     """return all department and courses associations"""
     new_obj = {}
     all_associations = []
-    dept_crs_associations = db.get_all_object(DepartmentCourse)
+    dept_crs_associations = db_controller.get_all_object(DepartmentCourse)
     if dept_crs_associations:
         for td in dept_crs_associations:
             department = [
@@ -173,7 +172,7 @@ def dept_course():
 def single_dept_course(id):
     """return a department-course association based on teacher id"""
     new_obj = {}
-    td = db.get_by_id(DepartmentCourse, id)
+    td = db_controller.get_by_id(DepartmentCourse, id)
     if td:
         department = [
             td.department.to_json() if td.department else None]
@@ -198,10 +197,10 @@ def create_crs_dept_association():
     if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
-    dept = db.get_by_id(Department, data['dept_id'])
+    dept = db_controller.get_by_id(Department, data['dept_id'])
     if not dept:
         return jsonify(ERROR='Department does not exists'), 404
-    course = db.get_by_id(Course, data['course_id'])
+    course = db_controller.get_by_id(Course, data['course_id'])
     if not course:
         return jsonify(ERROR='Course does not exists'), 404
 
@@ -210,12 +209,12 @@ def create_crs_dept_association():
             data['date_assigned'], BaseModel.DATE_FORMAT)
     try:
         # check if it exists
-        assoc = db.search(DepartmentCourse, **data)
+        assoc = db_controller.search(DepartmentCourse, **data)
         if assoc:
             return jsonify(ERROR='Association alredy exists'), 409
-        created = db.create_object(DepartmentCourse(**data))
+        created = db_controller.create_object(DepartmentCourse(**data))
     except Exception as e:
-        db._session.rollback()
+        db_controller._session.rollback()
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created", "id": created.id}), 201
 
@@ -228,17 +227,17 @@ def update_dept_crs(id):
         abort(403)
     data = dict(request.form)
     if data.get('dept_id'):
-        dept = db.get_by_id(Department, data['dept_id'])
+        dept = db_controller.get_by_id(Department, data['dept_id'])
         if not dept:
             return jsonify(ERROR='Department does not exists'), 404
     if data.get('course_id'):
-        course = db.get_by_id(Course, data['course_id'])
+        course = db_controller.get_by_id(Course, data['course_id'])
         if not course:
             return jsonify(ERROR='Course does not exists'), 404
 
     try:
         data['updated_at'] = datetime.utcnow()
-        updated = db.update(DepartmentCourse, id, **data)
+        updated = db_controller.update(DepartmentCourse, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -252,7 +251,7 @@ def remove_dept_crs(id):
     if not isinstance(current_user, Admin):
         abort(403)
     try:
-        db.delete(DepartmentCourse, id)
+        db_controller.delete(DepartmentCourse, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted an association"), 200

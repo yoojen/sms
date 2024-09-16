@@ -1,16 +1,12 @@
 from flask_login import current_user, login_required
-from models.courses_departments import Course, Department
-from models.roles_and_admins import Admin
-from models.scores import Score
+from models.models import (
+        Course, Department, Admin,
+        Score, Student, Teacher
+    )
 from api.v1.views import score_blueprint
-from api.engine import db
+from api.engine import db_controller
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
-from models.base_model import BaseModel
-from datetime import datetime
-from models.students import Student
-
-from models.teachers_and_degree import Teacher
 
 
 BASE_URL = 'http://localhost:5000/api/v1'
@@ -23,7 +19,7 @@ def scores():
 
     new_obj = {}
     all_scores = []
-    scores = db.get_all_object(Score)
+    scores = db_controller.get_all_object(Score)
     for score in scores:
         teacher = score.teacher.to_json() if score.teacher else None
         course = score.course.to_json()
@@ -54,10 +50,10 @@ def scores():
 @score_blueprint.route('/scores/<int:id>', methods=['GET'], strict_slashes=False)
 @login_required
 def single_score(id):
-    """returns single Score objects from the db"""
+    """returns single Score objects from the db_controller"""
     holder_old = {}
     new_obj = {}
-    score = db.get_by_id(Score, id)
+    score = db_controller.get_by_id(Score, id)
     if score:
         teacher = score.teacher.to_json() if score.teacher else None
         course = score.course.to_json()
@@ -105,9 +101,9 @@ def create_score():
     if isinstance(current_user, Admin):
         data['teacher_id'] = None
 
-    student = db.get_by_id(Student, int(data.get('student_id')))
-    dept = db.get_by_id(Department, data['dept_id'])
-    course = db.get_by_id(Course, data['course_code'])
+    student = db_controller.get_by_id(Student, int(data.get('student_id')))
+    dept = db_controller.get_by_id(Department, data['dept_id'])
+    course = db_controller.get_by_id(Course, data['course_code'])
 
     if not student:
         return jsonify(ERROR='Student not exists')
@@ -126,12 +122,12 @@ def create_score():
             abort(403)
     try:
         # check if it exists
-        find_score = db.search(Score, student_id=int(data.get('student_id')),
+        find_score = db_controller.search(Score, student_id=int(data.get('student_id')),
                                dept_id=data.get('dept_id'),
                                course_code=data.get('course_code'))
         if find_score:
             return jsonify(error="Score already exist"), 409
-        created = db.create_object(Score(**data))
+        created = db_controller.create_object(Score(**data))
     except ValueError as e:
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
@@ -147,12 +143,12 @@ def update_score(id):
         abort(403)
 
     if isinstance(current_user, Teacher):
-        score = db.get_by_id(Score, int(id))
+        score = db_controller.get_by_id(Score, int(id))
         if score.teacher != current_user:
             abort(403)
     try:
         data = dict(request.form)
-        updated = db.update(Score, id, **data)
+        updated = db_controller.update(Score, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -168,11 +164,11 @@ def delete_score(id):
         abort(403)
 
     if isinstance(current_user, Teacher):
-        score = db.get_by_id(Score, int(id))
+        score = db_controller.get_by_id(Score, int(id))
         if score.teacher != current_user:
             abort(403)
     try:
-        db.delete(Score, id)
+        db_controller.delete(Score, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted score"), 200

@@ -1,17 +1,13 @@
-import sqlite3
 from flask_login import current_user
-from models.courses_departments import Department
-from models.roles_and_admins import Admin
-from models.students import Student
+from models.models import Department, Admin, Student, Teacher
 from api.v1.views import students_blueprint
-from api.engine import db
+from api.engine import db_controller
 from flask import abort, jsonify, request
 import bcrypt
 from flask_login import login_required
 from sqlalchemy.exc import NoResultFound
 from datetime import date
 
-from models.teachers_and_degree import Teacher
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
@@ -24,7 +20,7 @@ def students():
     all_students = []
     # if isinstance(current_user, Student):
     #     abort(404)
-    students = db.get_all_object(Student)
+    students = db_controller.get_all_object(Student)
     if students:
         for student in students:
             department = f'{BASE_URL}/departments/{student.department.dept_code }'
@@ -56,7 +52,7 @@ def single_students(regno):
     """return all students in the storage"""
     new_obj = {}
     holder_old = {}
-    student = db.get_by_id(Student, regno)
+    student = db_controller.get_by_id(Student, regno)
     if student:
         department = f'{BASE_URL}/departments/{student.department.dept_code }'
         scores = [score.to_json() for score in student.scores]
@@ -91,7 +87,7 @@ def create_student():
     """function that handles creation endpoint for Student instance"""
     data = dict(request.get_json())
     try:
-        dept = db.get_by_id(Department, data['dept_id'])
+        dept = db_controller.get_by_id(Department, data['dept_id'])
         if not dept:
             return jsonify({"error": "Check Dept id"}), 400
 
@@ -101,10 +97,10 @@ def create_student():
         dob = data['dob'].split('-')
         # check if it exists
         data['dob'] = date(int(dob[0]), int(dob[1]), int(dob[2]))
-        find_Score = db.get_by_id(Student, data.get('regno'))
+        find_Score = db_controller.get_by_id(Student, data.get('regno'))
         if find_Score:
             return jsonify(error="Student already exist"), 409
-        created = db.create_object(Student(**data))
+        created = db_controller.create_object(Student(**data))
     except Exception as e:
         if "(sqlite3.IntegrityError)" in str(e):
             field = str(e).split('[')[0].split(" ")[-1].split(".")[-1][:-1]
@@ -126,7 +122,7 @@ def update_student(regno):
             or data.get('dept_id'):
         return jsonify(ERROR='You can update year of study, Admins only'), 403
     try:
-        updated = db.update(Student, regno, **data)
+        updated = db_controller.update(Student, regno, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -142,7 +138,7 @@ def delete_student(regno):
     if not isinstance(current_user, Admin):
         abort(403)
     try:
-        db.delete(Student, regno)
+        db_controller.delete(Student, regno)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted student"), 200

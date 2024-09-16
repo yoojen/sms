@@ -1,38 +1,48 @@
+from datetime import datetime
 from flask import Flask, jsonify
+from flask_migrate import Migrate
 
 # from flask_login import LoginManager, login_required
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS, cross_origin
 
 
-from api.engine import db
-from api.v1.views import (course_blueprint,
-                          dept_blueprint,
-                          assignm_blueprint,
-                          comm_blueprint,
-                          material_blueprint,
-                          roles_n_admin_bp,
-                          score_blueprint,
-                          students_blueprint,
-                          submission_bp,
-                          teacher_bp,
-                          degree_bp,
-                          auth_blueprint)
+from models import db
+from api.engine import db_controller
+from models.models import *
+import os
+
+db_path = os.path.join("E:/MY STUFFS/PROJECTS/python/sms/src", 'databases', 'sims.db')
+from api.v1.views import (
+    course_blueprint, dept_blueprint, assignm_blueprint,
+    comm_blueprint, material_blueprint, roles_n_admin_bp,
+    score_blueprint, students_blueprint, submission_bp, teacher_bp,
+    degree_bp, auth_blueprint
+)
 
 HOST = '127.0.0.1'
 PORT = 5000
 app = Flask(__name__)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db/sims.db"
 app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
 app.config["JWT_COOKIE_SAMESITE"] = "None"
 app.config["JWT_COOKIE_SECURE"] = True
 app.config['JWT_COOKIE_HTTPONLY'] = True
 app.config['JWT_COOKIE_DOMAIN'] = f'{HOST}:5000'
 app.config["JWT_COOKIE_CSRF_PROTECT"]= False
-
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 7200
 app.config['CORS_SUPPORTS_CREDENTIALS'] = True  # Allow cookies in cross-origin requests
-
 app.config["JWT_SECRET_KEY"] = "jwt yoojen signed key"
 
+db.init_app(app)
+migrate = Migrate(app, db)
+
+with app.app_context():
+    db.create_all()
 jwt = JWTManager(app=app)
 # apply CORS
 CORS(
@@ -99,21 +109,11 @@ def user_identity_lookup(user):
 
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
-    from models.students import Student
-    from models.teachers_and_degree import Teacher
-    from models.roles_and_admins import Admin
     identity = jwt_data["sub"]
-    user = db.get_by_email(Student, email=identity)
-    user = db.get_by_email(Teacher, email=identity) if user is None else user
-    user = db.get_by_email(Admin, email=identity) if user is None else user
+    user = db_controller.search_one(Student, email=identity)
+    user = db_controller.search_one(Teacher, email=identity) if user is None else user
+    user = db_controller.search_one(Admin, email=identity) if user is None else user
     return user
-
-@app.teardown_appcontext
-def teardown_app(code):
-    '''
-        Handles teardown
-    '''
-    db.close()
 
 
 @app.errorhandler(404)
@@ -134,6 +134,9 @@ def unauthorized_handler(error):
     return jsonify({"error": "Unauthorized"}), 403
 
 
+@app.route("/")
+def home():
+    return jsonify(msg="home")
 
 if __name__ == "__main__":
     app.run(HOST, PORT, debug=True, threaded=True)

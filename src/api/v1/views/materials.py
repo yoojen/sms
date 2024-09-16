@@ -1,29 +1,30 @@
-from datetime import datetime
-from flask_login import current_user, login_required
-from models.courses_departments import Course
-from models.materials_and_matdept import Material
 from api.v1.views import material_blueprint
-from api.engine import db
+
+from datetime import datetime
+from flask_login import login_required
+from models.models import (
+    Course, Department, Material, Admin, Student, Teacher
+    )
+from api.engine import db_controller
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
-from models.roles_and_admins import Admin
-from models.students import Student
-
-from models.teachers_and_degree import Teacher
+from flask_jwt_extended import current_user, jwt_required
 
 
 BASE_URL = 'http://localhost:5000/api/v1'
 
-
 @material_blueprint.route('/materials', methods=['GET'], strict_slashes=False)
-@login_required
+@jwt_required()
 def materials():
-    """returns all Materials objects from the db"""
+    """returns all Materials objects from the db_controller"""
 
     new_obj = {}
     all_materials = []
-    materials = db.get_all_object(Material)
+    # if isinstance(current_user, )
+    # materials = 
+    materials = db_controller.get_all_object(Material)
     for material in materials:
+        # print(dir(material))
         departments = [
             f'{BASE_URL}/departments/{depts.dept_code}'
             for depts in material.departments]
@@ -31,11 +32,13 @@ def materials():
 
         teacher = f'{BASE_URL}/teachers/{material.teacher.id}' if material.teacher else None
 
-        for k, v in material.to_json().items():
+        for k, v in material.to_dict().items():
             if k in ['id', 'course_code', 'teacher_id', 'year_of_study',
                      'description', 'link', 'created_at', 'updated_at']:
                 new_obj[k] = v
-        new_obj['departments'] = departments
+        depts = material.departments
+        depts_code = [dept.to_dict()["dept_code"] for dept in depts]
+        new_obj['departments'] = [dept.to_dict() for dept in material.departments]
         new_obj['course'] = course
         new_obj['teacher'] = teacher
 
@@ -45,22 +48,21 @@ def materials():
             if material.teacher == current_user or \
                     set(material.departments) & set(current_user.departments):
                 all_materials.append(new_obj)
-        if isinstance(current_user, Student):
-            if current_user.department in material.departments\
-                    and current_user.year_of_study == material.year_of_study:
+        if current_user.year_of_study == material.year_of_study and \
+            current_user.dept_id in depts_code:
                 all_materials.append(new_obj)
         new_obj = {}
-    return jsonify({"materials": all_materials}), 200
+    return jsonify({"materials": all_materials, "user_type": current_user.__class__.__name__}), 200
 
 
 @material_blueprint.route('/materials/<int:id>', methods=['GET'],
                           strict_slashes=False)
 @login_required
 def single_materials(id):
-    """returns single Material object from the db"""
+    """returns single Material object from the db_controller"""
     holder_old = {}
     new_obj = {}
-    material = db.get_by_id(Material, id)
+    material = db_controller.get_by_id(Material, id)
     if material:
         departments = [
             f'{BASE_URL}/departments/{depts.dept_code}'
@@ -69,7 +71,7 @@ def single_materials(id):
 
         teacher = f'{BASE_URL}/teachers/{material.teacher.id}'
 
-        for k, v in material.to_json().items():
+        for k, v in material.to_dict().items():
             if k in ['id', 'course_code', 'teacher_id', 'year_of_study',
                      'description', 'link', 'created_at', 'updated_at']:
                 holder_old[k] = v
@@ -106,19 +108,19 @@ def create_material():
     if isinstance(current_user, Student):
         abort(403)
     # check teacher or course availability
-    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    teacher = db_controller.get_by_id(Teacher, data['teacher_id'])
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
-    course = db.get_by_id(Course, data['course_code'])
+    course = db_controller.get_by_id(Course, data['course_code'])
     if not course:
         return jsonify(ERROR='Course does not exists'), 404
 
     try:
         # check if it exists
-        find_dept = db.get_by_id(Material, data.get('id'))
+        find_dept = db_controller.get_by_id(Material, data.get('id'))
         if find_dept:
             return jsonify(error="Material already exist"), 409
-        created = db.create_object(Material(**data))
+        created = db_controller.create_object(Material(**data))
     except ValueError as e:
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
@@ -133,7 +135,7 @@ def update_department(id):
     if isinstance(current_user, Student):
         abort(403)
     if isinstance(current_user, Teacher):
-        mat = db.get_by_id(Material, id)
+        mat = db_controller.get_by_id(Material, id)
         if int(mat.teacher_id) != int(current_user.id):
             abort(403)
     try:
@@ -141,7 +143,7 @@ def update_department(id):
         data['updated_at'] = datetime.utcnow()
         if data.get('year_of_study'):
             data['year_of_study'] = int(data.get('year_of_study'))
-        updated = db.update(Material, id, **data)
+        updated = db_controller.update(Material, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -157,11 +159,11 @@ def delete_material(id):
     if isinstance(current_user, Student):
         abort(403)
     if isinstance(current_user, Teacher):
-        mat = db.get_by_id(Material, id)
+        mat = db_controller.get_by_id(Material, id)
         if int(mat.teacher_id) != int(current_user.id):
             abort(403)
     try:
-        db.delete(Material, id)
+        db_controller.delete(Material, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted material"), 200
@@ -173,18 +175,18 @@ def find_material_depts(mat):
     all_depts = []
     depts = mat.departments
     for dept in depts:
-        all_depts.append(dept.to_json())
+        all_depts.append(dept.to_dict())
     return all_depts
 
 
 def find_material_teacher(mat):
     """find department materials"""
-    return mat.teacher.to_json()
+    return mat.teacher.to_dict()
 
 
 def find_material_course(mat):
     """find course that are associated with the material"""
-    return mat.course.to_json()
+    return mat.course.to_dict()
 
 
 def args_handler(material, args):

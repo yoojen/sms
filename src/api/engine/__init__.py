@@ -1,4 +1,4 @@
 from api.engine import storage
 
-db = storage.DB()
-db.reload()
+db_controller = storage.DBCONTROLLER()
+# db.reload()

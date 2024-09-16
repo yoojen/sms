@@ -1,10 +1,9 @@
 from flask_login import current_user, login_required
-from models.roles_and_admins import Admin
-from models.students import Student
-from models.teachers_and_degree import (Degree,
-                                        TeacherDegree, Teacher)
+from models.models import (
+    Admin, Student, Degree, TeacherDegree, Teacher
+    )
 from api.v1.views import degree_bp
-from api.engine import db
+from api.engine import db_controller
 from flask import abort, jsonify, request
 from sqlalchemy.exc import NoResultFound
 
@@ -20,7 +19,7 @@ def get_degrees():
     all_degrees = []
     if isinstance(current_user, Student):
         abort(404)
-    degrees = db.get_all_object(Degree)
+    degrees = db_controller.get_all_object(Degree)
     if degrees:
         for degree in degrees:
             teachers = [f'{BASE_URL}/teachers/{teacher.id }'
@@ -50,7 +49,7 @@ def single_degree(id):
     new_obj = {}
     if isinstance(current_user, Student):
         abort(404)
-    degree = db.get_by_id(Degree, id)
+    degree = db_controller.get_by_id(Degree, id)
     if degree:
         if isinstance(current_user, Admin):
             teachers = [f'{BASE_URL}/teachers/{teacher.id }'
@@ -76,14 +75,14 @@ def create_degree():
     if not isinstance(current_user, Admin):
         abort(403)
     data = dict(request.form)
-    find_dg = db.search(Degree, degree_name=data.get('degree_name'))
+    find_dg = db_controller.search(Degree, degree_name=data.get('degree_name'))
     if find_dg:
         return jsonify(ERROR='Alredy exists'), 409
     try:
         # check if it exists
-        created = db.create_object(Degree(**data))
+        created = db_controller.create_object(Degree(**data))
     except ValueError as e:
-        db._session.rollback()
+        db_controller._session.rollback()
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created",
                     "email": created.degree_name}), 201
@@ -98,7 +97,7 @@ def update_degree(id):
         abort(403)
     data = dict(request.form)
     try:
-        updated = db.update(Degree, id, **data)
+        updated = db_controller.update(Degree, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -113,7 +112,7 @@ def delete_degree(id):
     if current_user.__tablename__ == 'students':
         abort(403)
     try:
-        db.delete(Degree, id)
+        db_controller.delete(Degree, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted a degree"), 200
@@ -126,7 +125,7 @@ def teacher_degree():
     """return all teacher and degree associations"""
     new_obj = {}
     all_associations = []
-    tchr_degree_associationss = db.get_all_object(TeacherDegree)
+    tchr_degree_associationss = db_controller.get_all_object(TeacherDegree)
     if tchr_degree_associationss:
         for td in tchr_degree_associationss:
             teachers = [
@@ -153,7 +152,7 @@ def teacher_degree():
 def single_teacher_degree(id):
     """return a teacher degree association based on teacher id"""
     new_obj = {}
-    td = db.get_by_id(TeacherDegree, id)
+    td = db_controller.get_by_id(TeacherDegree, id)
     if td:
         teachers = [
             td.teacher.to_json() if td.teacher else None]
@@ -179,21 +178,21 @@ def create_teacherdegree_association():
         abort(403)
     data = dict(request.form)
     data['teacher_id'] = int(data.get('teacher_id'))
-    # check if degree or teacher exists in db
-    teacher = db.get_by_id(Teacher, data['teacher_id'])
+    # check if degree or teacher exists in db_controller
+    teacher = db_controller.get_by_id(Teacher, data['teacher_id'])
     if not teacher:
         return jsonify(ERROR='Teacher does not exists'), 404
-    degree = db.get_by_id(Degree, int(data['degree_id']))
+    degree = db_controller.get_by_id(Degree, int(data['degree_id']))
     if not degree:
         return jsonify(ERROR='Degree does not exists'), 404
     try:
         # check if it exists
-        assoc = db.search(TeacherDegree, **data)
+        assoc = db_controller.search(TeacherDegree, **data)
         if assoc:
             return jsonify(ERROR='Association alredy exists'), 409
-        created = db.create_object(TeacherDegree(**data))
+        created = db_controller.create_object(TeacherDegree(**data))
     except Exception as e:
-        db._session.rollback()
+        db_controller._session.rollback()
         return jsonify({"message": "Not created", "error": str(e)}), 400
     return jsonify({"message": "Successfully created", "id": created.id}), 201
 
@@ -207,16 +206,16 @@ def update_association_object(id):
     data = dict(request.form)
     if data.get('teacher_id'):
         data['teacher_id'] = int(data['teacher_id'])
-        teacher = db.get_by_id(Teacher, data['teacher_id'])
+        teacher = db_controller.get_by_id(Teacher, data['teacher_id'])
         if not teacher:
             return jsonify(ERROR='Teacher does not exists'), 404
     if data.get('degree_id'):
         data['degree_id'] = int(data['degree_id'])
-        degree = db.get_by_id(Degree, int(data['degree_id']))
+        degree = db_controller.get_by_id(Degree, int(data['degree_id']))
         if not degree:
             return jsonify(ERROR='Degree does not exists'), 404
     try:
-        updated = db.update(TeacherDegree, id, **data)
+        updated = db_controller.update(TeacherDegree, id, **data)
     except Exception as error:
         return jsonify(ERROR=str(error)), 400
     return jsonify({"message": "Successfully updated",
@@ -230,7 +229,7 @@ def remove_association(id):
     if not isinstance(current_user, Admin):
         abort(403)
     try:
-        db.delete(TeacherDegree, id)
+        db_controller.delete(TeacherDegree, id)
     except NoResultFound as e:
         return jsonify(ERROR=str(e)), 400
     return jsonify(message="Successfully deleted an association"), 200
