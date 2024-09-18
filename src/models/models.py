@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -21,16 +21,17 @@ class Assignment(BaseModel, db.Model):
     __tablename__ = "assignments"
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
     teacher_id: Mapped[int] = mapped_column(ForeignKey(
-        "teachers.id", ondelete='SET NULL'))
+        "teachers.id", ondelete='SET NULL'), nullable=True, unique=False)
     dept_id: Mapped[str] = mapped_column(ForeignKey(
-        "departments.dept_code", ondelete='CASCADE'), nullable=False)
+        "departments.dept_code", ondelete='CASCADE'), nullable=False, unique=False)
     course_id: Mapped[str] = mapped_column(ForeignKey(
-        "courses.course_code"), nullable=False)
+        "courses.course_code"), nullable=False, unique=False)
     assign_title: Mapped[str] = mapped_column(nullable=False)
     year_of_study: Mapped[int] = mapped_column(nullable=False)
-    due_date: Mapped[date] = mapped_column(nullable=True)
+    due_date: Mapped[datetime] = mapped_column(nullable=True)
     description: Mapped[str] = mapped_column(nullable=True)
     link: Mapped[str] = mapped_column(nullable=False)
+    submitted: Mapped[int] = mapped_column(default=0, nullable=True)
 
     # One-To-Many relationship
     teachers = relationship(
@@ -86,8 +87,6 @@ class Department(BaseModel, db.Model):
     # One-To-Many relationship
     communications = relationship(
         "Communication", back_populates="departments", cascade='delete, delete-orphan')
-    submissions = relationship(
-        "Submission", back_populates="department", cascade='delete, delete-orphan')
     scores = relationship(
         "Score", back_populates='department', cascade='delete, delete-orphan')
     students = relationship(
@@ -104,7 +103,7 @@ class DepartmentCourse(BaseModel, db.Model):
         "departments.dept_code", ondelete='CASCADE'), nullable=False)
     course_id: Mapped[str] = mapped_column(ForeignKey(
         "courses.course_code", ondelete='CASCADE'), nullable=False)
-    date_assigned: Mapped[date] = mapped_column(nullable=False)
+    date_assigned: Mapped[datetime] = mapped_column(nullable=False)
 
     course = relationship("Course", back_populates="department_association")
     department = relationship(
@@ -118,8 +117,8 @@ class Course(BaseModel, db.Model):
     course_name: Mapped[str] = mapped_column(nullable=False, unique=True)
     credits: Mapped[int] = mapped_column(nullable=False)
     year_of_study: Mapped[int] = mapped_column(nullable=False)
-    start_date: Mapped[date] = mapped_column(nullable=False)
-    end_date: Mapped[date] = mapped_column(nullable=False)
+    start_date: Mapped[datetime] = mapped_column(nullable=False)
+    end_date: Mapped[datetime] = mapped_column(nullable=False)
     created_by: Mapped[str] = mapped_column(ForeignKey(
         "admins.id", ondelete="SET NULL"))
     description: Mapped[str] = mapped_column(nullable=True)
@@ -172,7 +171,7 @@ class MaterialDepartments(BaseModel, db.Model):
         "materials.id", ondelete='CASCADE'), nullable=False)
     department_id: Mapped[str] = mapped_column(ForeignKey(
         "departments.dept_code", ondelete='CASCADE'), nullable=False)
-    date_uploaded: Mapped[date] = mapped_column(
+    date_uploaded: Mapped[datetime] = mapped_column(
         default=datetime.utcnow(), nullable=False)
 
     department = relationship(
@@ -200,7 +199,7 @@ class RoleAdmin(BaseModel, db.Model):
         "admins.id", ondelete='CASCADE'), nullable=False)
     role_id: Mapped[int] = mapped_column(ForeignKey(
         "roles.id", ondelete='CASCADE'), nullable=False)
-    date_granted: Mapped[date] = mapped_column(nullable=False)
+    date_granted: Mapped[datetime] = mapped_column(nullable=False)
 
     admin = relationship("Admin", back_populates="roles_association")
     role = relationship("Role", back_populates="admins_association")
@@ -214,10 +213,10 @@ class Admin(BaseModel, db.Model):
     last_name: Mapped[str] = mapped_column(nullable=False)
     email: Mapped[str] = mapped_column(nullable=False, unique=True)
     password: Mapped[str] = mapped_column(nullable=False)
-    dob: Mapped[date] = mapped_column(nullable=False)
+    dob: Mapped[datetime] = mapped_column(nullable=False)
     tel: Mapped[str] = mapped_column(nullable=False)
     citizenship: Mapped[str] = mapped_column(nullable=False)
-    last_login: Mapped[date] = mapped_column(nullable=True)
+    last_login: Mapped[datetime] = mapped_column(nullable=True)
 
     roles_association = relationship(
         "RoleAdmin", back_populates="admin", cascade='delete,delete-orphan')
@@ -260,14 +259,14 @@ class Student(BaseModel, db.Model):
     last_name: Mapped[str] = mapped_column(nullable=False)
     email: Mapped[str] = mapped_column(nullable=False, unique=True)
     password: Mapped[str] = mapped_column(nullable=False)
-    dob: Mapped[date] = mapped_column(nullable=False)
+    dob: Mapped[datetime] = mapped_column(nullable=False)
     tel: Mapped[str] = mapped_column(nullable=False)
     dept_id: Mapped[str] = mapped_column(ForeignKey(
         "departments.dept_code", ondelete='SET NULL'))
     year_of_study: Mapped[int] = mapped_column(nullable=False)
     sponsorship: Mapped[str] = mapped_column(nullable=True)
     citizenship: Mapped[str] = mapped_column(nullable=False)
-    last_login: Mapped[date] = mapped_column(nullable=True)
+    last_login: Mapped[datetime] = mapped_column(nullable=True)
 
     scores = relationship("Score", back_populates="student",
                           cascade='delete, delete-orphan')
@@ -284,10 +283,6 @@ class Submission(BaseModel, db.Model):
     """Model for submission table in db storage"""
     __tablename__ = "submissions"
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
-    course_code: Mapped[str] = mapped_column(ForeignKey(
-        "courses.course_code"), nullable=False)
-    dept_id: Mapped[str] = mapped_column(ForeignKey(
-        "departments.dept_code", ondelete='CASCADE'), nullable=False)
     student_id: Mapped[int] = mapped_column(ForeignKey(
         "students.regno", ondelete='CASCADE'), nullable=False)
     assign_id: Mapped[int] = mapped_column(ForeignKey(
@@ -297,8 +292,6 @@ class Submission(BaseModel, db.Model):
 
     student = relationship(
         "Student", back_populates="submissions")
-    department = relationship(
-        "Department", back_populates="submissions")
     assignment = relationship(
         "Assignment", back_populates="submissions")
 
@@ -311,7 +304,7 @@ class TeacherCourse(BaseModel, db.Model):
         "teachers.id", ondelete='CASCADE'), nullable=False)
     course_code: Mapped[str] = mapped_column(ForeignKey(
         "courses.course_code", ondelete='CASCADE'), nullable=False)
-    date_assigned: Mapped[date] = mapped_column(
+    date_assigned: Mapped[datetime] = mapped_column(
         nullable=False, default=datetime.utcnow())
 
     course = relationship("Course", back_populates="teacher_association")
@@ -326,7 +319,7 @@ class TeacherDepartments(BaseModel, db.Model):
         "teachers.id", ondelete='CASCADE'), nullable=False)
     dept_id: Mapped[str] = mapped_column(ForeignKey(
         "departments.dept_code", ondelete='CASCADE'), nullable=False)
-    date_assigned: Mapped[date] = mapped_column(
+    date_assigned: Mapped[datetime] = mapped_column(
         nullable=False, default=datetime.utcnow)
 
     department = relationship(
@@ -343,10 +336,10 @@ class Teacher(BaseModel, db.Model):
     tel: Mapped[str] = mapped_column(nullable=False)
     email: Mapped[str] = mapped_column(nullable=False, unique=True)
     password: Mapped[str] = mapped_column(nullable=False)
-    dob: Mapped[date] = mapped_column(nullable=False)
+    dob: Mapped[datetime] = mapped_column(nullable=False)
     citizenship: Mapped[str] = mapped_column(nullable=False)
     staff_member: Mapped[bool] = mapped_column(default=False)
-    last_login: Mapped[date] = mapped_column(nullable=True)
+    last_login: Mapped[datetime] = mapped_column(nullable=True)
 
     #  Many-To-Many relationship
 

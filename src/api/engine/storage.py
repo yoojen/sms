@@ -40,7 +40,7 @@ class DBCONTROLLER:
             return obj
         except:
             return None
-    
+
     def update(self, cls, id: str, **kwargs) -> Dict:
         """update the object in the databse using provided
         id and data as params
@@ -49,9 +49,9 @@ class DBCONTROLLER:
         if obj:
             for k, v in kwargs.items():
                 if k == 'password':
-                    print("It is password")
                     password_bytes = v.encode()
-                    hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+                    hashed_password = bcrypt.hashpw(
+                        password_bytes, bcrypt.gensalt())
                     setattr(obj, k, hashed_password)
                     continue
                 if hasattr(obj, k):
@@ -80,9 +80,8 @@ class DBCONTROLLER:
             return objects
         else:
             return None
-    
+
     def search_one(self, cls, **kwargs):
         """search an item from db based on passed kwargs and cls(Class)"""
         object = db.session.query(cls).filter_by(**kwargs).first()
         return object
-    

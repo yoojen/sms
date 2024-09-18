@@ -14,7 +14,6 @@ from flask_jwt_extended import (
     get_jwt_identity)
 
 
-
 BASE_URL = 'http://localhost:5000/api/v1'
 
 
@@ -22,43 +21,19 @@ BASE_URL = 'http://localhost:5000/api/v1'
 @jwt_required()
 def assignments():
     """returns all Assignments objects from the db"""
-    new_obj = {}
     all_assignms = []
     # I'll work on different users
     if isinstance(current_user, Student):
-        assignms = [assign for assign in current_user.department.assignments if assign.year_of_study == current_user.year_of_study]
+        assignms = [assign for assign in current_user.department.assignments if assign.year_of_study ==
+                    current_user.year_of_study]
     elif isinstance(current_user, Teacher):
         assignms = current_user.assignments
     else:
         assignms = db_controller.get_all_object(Assignment)
     for assignm in assignms:
-        # ass_dept = assignm.department
-        # course = assignm.course.to_dict()
-        # teacher = assignm.teachers.to_dict()
-
-        # submissions = [
-        #     f'{BASE_URL}/submissions/{subm.id}'
-        #     for subm in assignm.submissions]
-
-        # for k, v in assignm.to_dict().items():
-        #     if k in ['id', 'teacher_id', 'dept_id', 'course_id', 'assign_title',
-        #              'year_of_study', 'due_date', 'description', 'link',
-        #              'created_at', 'updated_at']:
-        #         new_obj[k] = v
-        # teacher['password'] = '***'
-        # new_obj['teacher'] = teacher
-        # new_obj['submissions'] = submissions
-        # new_obj['course'] = course
-        # if current_user.__tablename__ == 'students':
-        #     if ass_dept == current_user.department and \
-        #             assignm.year_of_study == current_user.year_of_study:
-        #         all_assignms.append(new_obj)
-        # if current_user.__tablename__ == 'admins':
-        #     all_assignms.append(new_obj)
-        # if current_user.__tablename__ == 'teachers':
-        #     if assignm.teachers == current_user:
-        del assignm.__dict__["_sa_instance_state"]
-        all_assignms.append(assignm.__dict__)
+        if assignm.due_date < datetime.now():
+            continue
+        all_assignms.append(assignm.to_dict())
     return jsonify({"assignments": all_assignms}), 200
 
 
@@ -130,9 +105,9 @@ def create_assignments():
                 data.get('due_date'), BaseModel.DATE_FORMAT)
             # check if it exists
             find_dept = db_controller.search(Assignment, id=data.get('id'),
-                                  dept_id=data.get('dept_id'),
-                                  teacher_id=data.get('teacher_id'),
-                                  assign_title=data.get('assign_title'))
+                                             dept_id=data.get('dept_id'),
+                                             teacher_id=data.get('teacher_id'),
+                                             assign_title=data.get('assign_title'))
             if find_dept:
                 return jsonify(error="Assignment already exist")
             created = db_controller.create_object(Assignment(**data))

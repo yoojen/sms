@@ -66,9 +66,6 @@ def departments():
         communications = [
             f'{BASE_URL}/communications/{comm.id}'
             for comm in dept.communications if dept.communications]
-        submissions = [
-            f'{BASE_URL}/submissions/{subm.id}'
-            for subm in dept.submissions if dept.submissions]
         scores = [
             f'{BASE_URL}/scores/{score.id}'
             for score in dept.scores if dept.scores]

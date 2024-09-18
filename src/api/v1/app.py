@@ -1,3 +1,9 @@
+from api.v1.views import (
+    course_blueprint, dept_blueprint, assignm_blueprint,
+    comm_blueprint, material_blueprint, roles_n_admin_bp,
+    score_blueprint, students_blueprint, submission_bp, teacher_bp,
+    degree_bp, auth_blueprint
+)
 from datetime import datetime
 from flask import Flask, jsonify
 from flask_migrate import Migrate
@@ -12,13 +18,8 @@ from api.engine import db_controller
 from models.models import *
 import os
 
-db_path = os.path.join("E:/MY STUFFS/PROJECTS/python/sms/src", 'databases', 'sims.db')
-from api.v1.views import (
-    course_blueprint, dept_blueprint, assignm_blueprint,
-    comm_blueprint, material_blueprint, roles_n_admin_bp,
-    score_blueprint, students_blueprint, submission_bp, teacher_bp,
-    degree_bp, auth_blueprint
-)
+db_path = os.path.join(
+    "E:/MY STUFFS/PROJECTS/python/sms/src", 'databases', 'sims.db')
 
 HOST = '127.0.0.1'
 PORT = 5000
@@ -27,15 +28,20 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Upload configurations
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
+app.config['UPLOAD_FOLDER'] = os.path.abspath('uploads')
+
 # app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db/sims.db"
 app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
 app.config["JWT_COOKIE_SAMESITE"] = "None"
 app.config["JWT_COOKIE_SECURE"] = True
 app.config['JWT_COOKIE_HTTPONLY'] = True
 app.config['JWT_COOKIE_DOMAIN'] = f'{HOST}:5000'
-app.config["JWT_COOKIE_CSRF_PROTECT"]= False
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 7200
-app.config['CORS_SUPPORTS_CREDENTIALS'] = True  # Allow cookies in cross-origin requests
+# Allow cookies in cross-origin requests
+app.config['CORS_SUPPORTS_CREDENTIALS'] = True
 app.config["JWT_SECRET_KEY"] = "jwt yoojen signed key"
 
 db.init_app(app)
@@ -48,7 +54,7 @@ jwt = JWTManager(app=app)
 CORS(
     app, resources={r"/api/v1/*": {"origins": "*"}},
     supports_credentials=True
-    )
+)
 
 
 """
@@ -103,16 +109,20 @@ def load_user(user_id):
         return admin[0]
 """
 
+
 @jwt.user_identity_loader
 def user_identity_lookup(user):
     return user.email
+
 
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     user = db_controller.search_one(Student, email=identity)
-    user = db_controller.search_one(Teacher, email=identity) if user is None else user
-    user = db_controller.search_one(Admin, email=identity) if user is None else user
+    user = db_controller.search_one(
+        Teacher, email=identity) if user is None else user
+    user = db_controller.search_one(
+        Admin, email=identity) if user is None else user
     return user
 
 
@@ -136,7 +146,8 @@ def unauthorized_handler(error):
 
 @app.route("/")
 def home():
-    return jsonify(msg="home")
+    return jsonify(msg=f"home")
+
 
 if __name__ == "__main__":
     app.run(HOST, PORT, debug=True, threaded=True)
